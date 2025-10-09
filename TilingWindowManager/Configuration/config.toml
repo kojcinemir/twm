@@ -1,0 +1,344 @@
+# Tiling Window Manager Hotkey Configuration 
+
+
+# Don't force (kill process) of the application.            
+# USE exit_application hotkey. Default ALT+CTRL+O instead to force close
+
+
+#####CONFIG#####
+
+# If application is not recognized for tile 
+# Add process names (without .exe) here to include them
+allowed_owned_windows = ["frontrunner"]
+
+# Logging Settings
+[logging]
+    enabled = true  # Set to false to disable logging in normal mode (saves resources)
+    level = "debug"   # options: debug, info, warning, error
+
+# Workspace Indicator Visual Settings
+[workspace_indicator]
+    workspace_width = 75
+    workspace_height = 40
+    workspace_margin = 2
+    icon_size = 16
+    active_workspace_border_color = 0xFB923C
+    background_color = 0x1c1c1c
+    active_workspace_color = 0x0f0f0f
+    hovered_workspace_color = 0x383838
+    inactive_workspace_color = 0x1c1c1c
+    active_workspace_text_color = 0x00FFFF
+    inactive_workspace_text_color = 0xFFFFFF
+    stacked_mode_workspace_color = 0x2a4a7c
+    stacked_mode_border_color = 0x2a4a7c
+    offset_from_taskbar_left_edge = 0
+    active_workspace_border_opacity = 255
+
+    # to force windows 10 positioning of workspace indicator, since start menu on windows 10 is on the left
+    # use_windows10_positioning = true
+    windows10_offset_from_taskbar_right_edge = 120
+
+# Window Border Settings
+[window_border]
+    border_width = 4
+    border_color = 0xFB923C
+    rounded_borders = true
+    corner_radius = 12
+    opacity = 255
+
+# Pinned Applications - Applications that should always appear on specific workspaces
+[pinned_applications]
+    #"Notepad.exe" = 8
+    #"chrome.exe" = 1
+
+# Application Hotkeys - Hotkeys to switch to workspace containing specific applications
+[application_hotkeys]
+    "ALT+Q" = "slack.exe"
+    "ALT+W" = "TcXaeShell.exe"
+    "ALT+E" = "devenv.exe"
+    "ALT+SHIFT+A" = "Arc.exe"
+
+# HotKey Key-Action Mappings
+[hotkeys]
+# Exit application properly. Will ensure that all the windows tiled by the MELD have proper visiblity restored
+    [hotkeys.exit_application]
+        key = "ALT+CTRL+O"
+        action = "exit_application"
+
+# Find empty workspace on active monitor and switch to it
+    [hotkeys.switch_to_free_workspace]
+        key = "ALT+F"
+        action = "switch_to_free_workspace"
+
+# Move active window to free workspace on active monitor and move to it
+    [hotkeys.move_to_free_workspace]
+        key = "ALT+SHIFT+F"
+        action = "move_to_free_workspace"
+
+# Find free workspace on other monitor and move to it. Fallback to workspace 1 if all occupied. Works correctly in 2 monitor setup
+    [hotkeys.switch_to_free_workspace_other_monitor]
+        key = "CTRL+F"
+        action = "switch_to_free_workspace_other_monitor"
+
+# Move active window from one monitor to other monitor at first free workspace. If all occupied fallback to 1. Works correcly in 2 monitor setup
+    [hotkeys.move_to_free_workspace_other_monitor]
+        key = "CTRL+SHIFT+F"
+        action = "move_to_free_workspace_other_monitor"
+
+# Will refresh (retile) the workspace if there is some and issue with tiling        
+    [hotkeys.refresh_monitor]
+        key = "ALT+R"
+        action = "refresh_active_monitor"
+
+# Will untile the untile or retile the window that was previously tiled
+    [hotkeys.remove_from_tiling]
+        key = "ALT+T"
+        action = "remove_from_tiling"
+
+# Toogle stacked mode
+    [hotkeys.toggle_stacked_mode]
+        key = "ALT+SHIFT+S"
+        action = "toggle_stacked_mode"
+
+# Cycle between stacked windows in a workspace
+    [hotkeys.cycle_stacked_window]
+        key = "ALT+S"
+        action = "cycle_stacked_window"
+
+# Will try to reload if some of the windows got lost in the tiling process. Still in the testing phase 
+    [hotkeys.reload_allowed_owned_windows]
+        key = "ALT+SHIFT+R"
+        action = "reload_allowed_owned_windows"
+
+# Resize windows
+    [hotkeys.increase_split]
+        key = "ALT+]"
+        action = "increase_split_ratio"
+
+    [hotkeys.decrease_split]
+        key = "ALT+["
+        action = "decrease_split_ratio"
+
+# Close active window
+    [hotkeys.close_window]
+        key = "ALT+SHIFT+C"
+        action = "close_window"
+
+# Focus window on active workspace
+    [hotkeys.focus_left]
+        key = "ALT+H"
+        action = "focus_left"
+
+    [hotkeys.focus_down]
+        key = "ALT+J"
+        action = "focus_down"
+
+    [hotkeys.focus_up]
+        key = "ALT+K"
+        action = "focus_up"
+
+    [hotkeys.focus_right]
+        key = "ALT+L"
+        action = "focus_right"
+
+# Move window position on active workspace
+    [hotkeys.swap_left]
+        key = "ALT+SHIFT+H"
+        action = "swap_left"
+
+    [hotkeys.swap_down]
+        key = "ALT+SHIFT+J"
+        action = "swap_down"
+
+    [hotkeys.swap_up]
+        key = "ALT+SHIFT+K"
+        action = "swap_up"
+
+    [hotkeys.swap_right]
+        key = "ALT+SHIFT+L"
+        action = "swap_right"
+
+# Switch to workspace on current active monitor
+    [hotkeys.workspace_1]
+        key = "ALT+1"
+        action = "switch_to_workspace"
+
+    [hotkeys.workspace_2]
+        key = "ALT+2"
+        action = "switch_to_workspace"
+
+    [hotkeys.workspace_3]
+        key = "ALT+3"
+        action = "switch_to_workspace"
+
+    [hotkeys.workspace_4]
+        key = "ALT+4"
+        action = "switch_to_workspace"
+
+    [hotkeys.workspace_5]
+        key = "ALT+5"
+        action = "switch_to_workspace"
+
+    [hotkeys.workspace_6]
+        key = "ALT+6"
+        action = "switch_to_workspace"
+
+    [hotkeys.workspace_7]
+        key = "ALT+7"
+        action = "switch_to_workspace"
+
+    [hotkeys.workspace_8]
+        key = "ALT+8"
+        action = "switch_to_workspace"
+
+# Move window to workspace on active monitor
+    [hotkeys.move_to_workspace_1]
+        key = "ALT+SHIFT+1"
+        action = "move_to_workspace"
+
+    [hotkeys.move_to_workspace_2]
+        key = "ALT+SHIFT+2"
+        action = "move_to_workspace"
+
+    [hotkeys.move_to_workspace_3]
+
+        key = "ALT+SHIFT+3"
+        action = "move_to_workspace"
+
+    [hotkeys.move_to_workspace_4]
+        key = "ALT+SHIFT+4"
+        action = "move_to_workspace"
+
+    [hotkeys.move_to_workspace_5]
+        key = "ALT+SHIFT+5"
+        action = "move_to_workspace"
+
+    [hotkeys.move_to_workspace_6]
+        key = "ALT+SHIFT+6"
+        action = "move_to_workspace"
+
+    [hotkeys.move_to_workspace_7]
+        key = "ALT+SHIFT+7"
+        action = "move_to_workspace"
+
+    [hotkeys.move_to_workspace_8]
+        key = "ALT+SHIFT+8"
+        action = "move_to_workspace"
+
+
+# Switch to monitor positioned left/right/top/bottom
+    [hotkeys.switch_monitor_left]
+        key = "ALT+CTRL+H"
+        action = "switch_monitor_left"
+
+    [hotkeys.switch_monitor_down]
+        key = "ALT+CTRL+J"
+        action = "switch_monitor_down"
+
+    [hotkeys.switch_monitor_up]
+        key = "ALT+CTRL+K"
+        action = "switch_monitor_up"
+
+    [hotkeys.switch_monitor_right]
+        key = "ALT+CTRL+L"
+        action = "switch_monitor_right"
+
+# Swapping active workspace windows with workspace at N on the active monitor
+    [hotkeys.swap_workspace_1]
+        key = "ALT+CTRL+1"
+        action = "swap_workspace"
+
+    [hotkeys.swap_workspace_2]
+        key = "ALT+CTRL+2"
+        action = "swap_workspace"
+
+    [hotkeys.swap_workspace_3]
+        key = "ALT+CTRL+3"
+        action = "swap_workspace"
+
+    [hotkeys.swap_workspace_4]
+        key = "ALT+CTRL+4"
+        action = "swap_workspace"
+
+    [hotkeys.swap_workspace_5]
+        key = "ALT+CTRL+5"
+        action = "swap_workspace"
+
+    [hotkeys.swap_workspace_6]
+        key = "ALT+CTRL+6"
+        action = "swap_workspace"
+
+    [hotkeys.swap_workspace_7]
+        key = "ALT+CTRL+7"
+        action = "swap_workspace"
+
+    [hotkeys.swap_workspace_8]
+        key = "ALT+CTRL+8"
+        action = "swap_workspace"
+
+# Go to workspace at number N on the other monitor. Works correctly in 2 monitor setup
+    [hotkeys.switch_other_monitor_workspace_1]
+        key = "CTRL+1"
+        action = "switch_other_monitor_workspace"
+
+    [hotkeys.switch_other_monitor_workspace_2]
+        key = "CTRL+2"
+        action = "switch_other_monitor_workspace"
+
+    [hotkeys.switch_other_monitor_workspace_3]
+        key = "CTRL+3"
+        action = "switch_other_monitor_workspace"
+
+    [hotkeys.switch_other_monitor_workspace_4]
+        key = "CTRL+4"
+        action = "switch_other_monitor_workspace"
+
+    [hotkeys.switch_other_monitor_workspace_5]
+        key = "CTRL+5"
+        action = "switch_other_monitor_workspace"
+
+    [hotkeys.switch_other_monitor_workspace_6]
+        key = "CTRL+6"
+        action = "switch_other_monitor_workspace"
+
+    [hotkeys.switch_other_monitor_workspace_7]
+        key = "CTRL+7"
+        action = "switch_other_monitor_workspace"
+
+    [hotkeys.switch_other_monitor_workspace_8]
+        key = "CTRL+8"
+        action = "switch_other_monitor_workspace"
+
+
+# Move active window from active monitor to workspace at N on other monitor. Works correctly in 2 monitor setup
+    [hotkeys.move_to_other_monitor_workspace_1]
+        key = "CTRL+SHIFT+1"
+        action = "move_to_other_monitor_workspace"
+
+    [hotkeys.move_to_other_monitor_workspace_2]
+        key = "CTRL+SHIFT+2"
+        action = "move_to_other_monitor_workspace"
+
+    [hotkeys.move_to_other_monitor_workspace_3]
+        key = "CTRL+SHIFT+3"
+        action = "move_to_other_monitor_workspace"
+
+    [hotkeys.move_to_other_monitor_workspace_4]
+        key = "CTRL+SHIFT+4"
+        action = "move_to_other_monitor_workspace"
+
+    [hotkeys.move_to_other_monitor_workspace_5]
+        key = "CTRL+SHIFT+5"
+        action = "move_to_other_monitor_workspace"
+
+    [hotkeys.move_to_other_monitor_workspace_6]
+        key = "CTRL+SHIFT+6"
+        action = "move_to_other_monitor_workspace"
+
+    [hotkeys.move_to_other_monitor_workspace_7]
+        key = "CTRL+SHIFT+7"
+        action = "move_to_other_monitor_workspace"
+
+    [hotkeys.move_to_other_monitor_workspace_8]
+        key = "CTRL+SHIFT+8"
+        action = "move_to_other_monitor_workspace"
