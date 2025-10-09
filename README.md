@@ -3,6 +3,7 @@
 I've always been drawn to tiling window managers on linux and the productivity they bring to the table after getting used to them. However, my day job requires working on a Windows machine, which led me on a journey to create a Tiling Window Manager for Windows. What started as a simple project with just a few features quickly evolved as I found myself adding more and more functionality. Now it has matured enough that I'm excited to share it with the world.
 
 Note: Though technically still in alpha, the project has reached a level of stability where I comfortably use it as my daily driver.
+<img width="1919" height="1079" alt="TWM-001" src="https://github.com/user-attachments/assets/73bb614b-784e-446f-a1a8-aab32932328c" />
 
 ## Features
 
