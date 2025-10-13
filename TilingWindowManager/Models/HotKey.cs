@@ -280,6 +280,26 @@ namespace TilingWindowManager
             }
         }
 
+        public void ReloadHotKeys()
+        {
+
+            foreach (var hotkey in _config.AllHotKeys)
+            {
+                UnregisterHotKey(messageWindow, (int)hotkey.HotkeyId);
+            }
+
+            foreach (var appHotkey in _appHotkeysConfig.AllApplicationHotkeys)
+            {
+                UnregisterHotKey(messageWindow, (int)appHotkey.HotkeyId);
+            }
+
+            _config.LoadConfiguration();
+            _appHotkeysConfig.LoadConfiguration();
+
+            InitializeHotKeys();
+            InitializeApplicationHotKeys();
+        }
+
         public void CleanUp()
         {
             if (isDisposed) return;

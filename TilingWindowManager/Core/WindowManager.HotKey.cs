@@ -207,6 +207,10 @@ namespace TilingWindowManager
                     CloseActiveWindow();
                     break;
 
+                case "reload_configuration":
+                    ReloadConfiguration(hotKey);
+                    break;
+
                 case "switch_to_free_workspace":
                     if (activeMonitor != null)
                     {

@@ -505,6 +505,71 @@ namespace TilingWindowManager
             Monitor.CleanupWorkspaceIndicator();
         }
 
+        private void ReloadConfiguration(HotKey hotKey)
+        {
+
+            try
+            {
+                Logger.ReloadConfiguration();
+
+                hotKey.ReloadHotKeys();
+                InitializeHotkeyConfig(hotKey.Configuration);
+
+                windowBorder?.Cleanup();
+                Thread.Sleep(100); 
+                windowBorder = new WindowBorder();
+                windowBorder.SetTileCheckCallback(IsWindowTiled);
+
+                CleanupWorkspaceIndicators();
+                Thread.Sleep(100);
+                InitializeWorkspaceIndicators();
+
+                pinnedApplicationsConfig = new PinnedApplicationsConfiguration();
+                pinnedApplicationsConfig.LoadConfiguration();
+
+                applicationHotkeysConfig = new ApplicationHotkeysConfiguration();
+                applicationHotkeysConfig.LoadConfiguration();
+
+                var workspaceConfig = new WorkspaceConfiguration();
+                workspaceConfig.LoadConfiguration();
+
+                if (workspaceConfig.StackedOnStartup)
+                {
+                    foreach (var monitor in monitors)
+                    {
+                        foreach (var workspace in monitor.GetAllWorkspaces())
+                        {
+                            if (!workspace.IsStackedMode)
+                            {
+                                workspace.EnableStackedMode();
+                            }
+                        }
+                    }
+                }
+
+
+                foreach (var monitor in monitors)
+                {
+                    var currentWorkspace = monitor.GetCurrentWorkspace();
+                    if (currentWorkspace.IsStackedMode)
+                    {
+                        currentWorkspace.FocusNewestWindowInStack();
+                        ApplyStackedLayout(monitor, currentWorkspace);
+                    }
+                    else
+                    {
+                        ApplyTilingToCurrentWorkspace(monitor);
+                    }
+                }
+
+                UpdateWorkspaceIndicator();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error reloading configuration");
+            }
+        }
+
         private void InitializeWindowEventHooks()
         {
             winEventProc = new WinEventDelegate(WinEventProc);
