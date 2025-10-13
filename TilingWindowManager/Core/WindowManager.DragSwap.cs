@@ -269,6 +269,8 @@ namespace TilingWindowManager
 
                 dragStates.Remove(window);
                 lastDragOperationTime[window] = DateTime.Now;
+                SuspendBorder(window);
+                RefreshBorder(window);
             }
             catch (Exception ex)
             {
