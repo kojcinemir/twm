@@ -701,6 +701,7 @@ namespace TilingWindowManager
         }
         private bool IsWindowInCurrentWorkspace(nint window)
         {
+            if (monitors == null) return false;
             foreach (var monitor in monitors)
             {
                 if (monitor.IsWindowInCurrentWorkspace(window))
