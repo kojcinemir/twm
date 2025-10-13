@@ -92,9 +92,17 @@ namespace TilingWindowManager
 
         private void InitializeAllWorkspaces()
         {
+            var workspaceConfig = new WorkspaceConfiguration();
+            workspaceConfig.LoadConfiguration();
+
             foreach (var workspace in workspaces.GetAllWorkspaces())
             {
                 workspace.InitializeTiling(WorkArea);
+
+                if (workspaceConfig.StackedOnStartup)
+                {
+                    workspace.EnableStackedMode();
+                }
             }
         }
 
