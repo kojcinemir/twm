@@ -60,6 +60,9 @@ namespace TilingWindowManager
         [DllImport("user32.dll", SetLastError = true)]
         private static extern ushort RegisterClass(ref WNDCLASS lpWndClass);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool UnregisterClass(string lpClassName, nint hInstance);
+
         [DllImport("kernel32.dll")]
         private static extern nint GetModuleHandle(string lpModuleName);
 
@@ -247,6 +250,7 @@ namespace TilingWindowManager
         private Dictionary<nint, MonitorBorderData> monitorBorders = new Dictionary<nint, MonitorBorderData>();
         private WndProc wndProc = null!;
         private bool isInitialized = false;
+        private bool isClassRegistered = false;
         private Func<nint, bool>? isWindowTiledCallback;
 
         public WindowBorder()
@@ -274,14 +278,24 @@ namespace TilingWindowManager
                 ushort classAtom = RegisterClass(ref wndClass);
                 if (classAtom == 0)
                 {
-                    return;
+                    int error = Marshal.GetLastWin32Error();
+                    if (error != 1410)
+                    {
+                        Logger.Error($"Failed to register window border class. Error: {error}");
+                        return;
+                    }
+                }
+                else
+                {
+                    isClassRegistered = true;
                 }
 
                 InitializeAllMonitorBorders();
                 isInitialized = true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.Error(ex, "Error initializing WindowBorder");
             }
         }
 
@@ -892,9 +906,26 @@ namespace TilingWindowManager
                 }
 
                 monitorBorders.Clear();
+
+                if (isClassRegistered)
+                {
+                    nint hInstance = GetModuleHandle(null!);
+                    if (UnregisterClass(BORDER_WINDOW_CLASS, hInstance))
+                    {
+                        isClassRegistered = false;
+                    }
+                    else
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        Logger.Warning($"Failed to unregister window border class. Error: {error}");
+                    }
+                }
+
+                isInitialized = false;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.Error(ex, "Error in WindowBorder cleanup");
             }
         }
 

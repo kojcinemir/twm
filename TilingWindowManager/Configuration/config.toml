@@ -89,10 +89,15 @@ allowed_owned_windows = ["frontrunner"]
         key = "CTRL+SHIFT+F"
         action = "move_to_free_workspace_other_monitor"
 
-# Will refresh (retile) the workspace if there is some and issue with tiling        
+# Will refresh (retile) the workspace if there is some and issue with tiling
     [hotkeys.refresh_monitor]
         key = "ALT+R"
         action = "refresh_active_monitor"
+
+# Reload configuration without restarting the application
+    [hotkeys.reload_configuration]
+        key = "ALT+CTRL+R"
+        action = "reload_configuration"
 
 # Will untile the untile or retile the window that was previously tiled
     [hotkeys.remove_from_tiling]

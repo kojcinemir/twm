@@ -25,11 +25,17 @@ namespace TilingWindowManager
 {
     public static class Logger
     {
-        private static readonly ILogger? _logger;
+        private static ILogger? _logger;
         private static bool _loggingEnabled = true;
         private static string _logLevel = "info";
+        private static readonly object _loggerLock = new object();
 
         static Logger()
+        {
+            InitializeLogger();
+        }
+
+        private static void InitializeLogger()
         {
             var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.toml");
             var loggingConfig = LoggingConfiguration.LoadFromFile(configPath);
@@ -73,6 +79,24 @@ namespace TilingWindowManager
             }
         }
 
+        public static void ReloadConfiguration()
+        {
+            lock (_loggerLock)
+            {
+                if (_logger is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+
+                InitializeLogger();
+
+                if (_loggingEnabled && _logger != null)
+                {
+                    _logger.Information("Logging configuration reloaded - Level: {Level}, Enabled: {Enabled}", _logLevel, _loggingEnabled);
+                }
+            }
+        }
+
         public static void EnableLogging(bool enable = true)
         {
             _loggingEnabled = enable;
@@ -80,41 +104,56 @@ namespace TilingWindowManager
 
         public static void Info(string message)
         {
-            if (_loggingEnabled && _logger != null)
+            lock (_loggerLock)
             {
-                _logger.Information(message);
+                if (_loggingEnabled && _logger != null)
+                {
+                    _logger.Information(message);
+                }
             }
         }
 
         public static void Warning(string message)
         {
-            if (_loggingEnabled && _logger != null)
+            lock (_loggerLock)
             {
-                _logger.Warning(message);
+                if (_loggingEnabled && _logger != null)
+                {
+                    _logger.Warning(message);
+                }
             }
         }
 
         public static void Error(string message)
         {
-            if (_loggingEnabled && _logger != null)
+            lock (_loggerLock)
             {
-                _logger.Error(message);
+                if (_loggingEnabled && _logger != null)
+                {
+                    _logger.Error(message);
+                }
             }
         }
 
         public static void Error(Exception ex, string message)
         {
-            if (_loggingEnabled && _logger != null)
+            lock (_loggerLock)
             {
-                _logger.Error(ex, message);
+                if (_loggingEnabled && _logger != null)
+                {
+                    _logger.Error(ex, message);
+                }
             }
         }
 
         public static void CloseAndFlush()
         {
-            if (_loggingEnabled && _logger != null)
+            lock (_loggerLock)
             {
-                Log.CloseAndFlush();
+                if (_loggingEnabled && _logger != null)
+                {
+                    Log.CloseAndFlush();
+                }
             }
         }
     }
