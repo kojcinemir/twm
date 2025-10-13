@@ -60,7 +60,34 @@ namespace TilingWindowManager
 
             if (windows.Count > 0)
             {
-                workspace.ApplyTiling();
+                Monitor? workspaceMonitor = null;
+                foreach (var monitor in monitors)
+                {
+                    if (monitor.GetWorkspace(workspace.Id).Equals(workspace))
+                    {
+                        workspaceMonitor = monitor;
+                        break;
+                    }
+                }
+
+                if (workspaceMonitor != null)
+                {
+                    if (workspace.IsStackedMode)
+                    {
+                        // Focus the newest window when in stacked mode
+                        workspace.FocusNewestWindowInStack();
+                        ApplyStackedLayout(workspaceMonitor, workspace);
+                    }
+                    else
+                    {
+                        workspace.ApplyTiling();
+                    }
+                }
+                else
+                {
+                    // Fallback if monitor not found
+                    workspace.ApplyTiling();
+                }
             }
 
             UpdateWorkspaceIndicator();

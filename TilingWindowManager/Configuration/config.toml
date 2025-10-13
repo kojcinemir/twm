@@ -11,6 +11,10 @@
 # Add process names (without .exe) here to include them
 allowed_owned_windows = ["frontrunner"]
 
+# Workspace Settings
+[workspace]
+    stacked_on_startup = false  # Set to true to start all workspaces in stacked mode by default
+
 # Logging Settings
 [logging]
     enabled = true  # Set to false to disable logging in normal mode (saves resources)
