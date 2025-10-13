@@ -74,6 +74,7 @@ Don't kill application in the processes. Use default (ALT+CTRL+O) keybinding to 
 
 ### Utility
 - `ALT+R` - Refresh active workspace tiling - Usefull to try and "retile" workspace if there is a issue.
+- `ALT+CTRL+R` - Reload config.toml configuration - The following will be reloaded: workspace indicator settings, window border settings, hotkeys... Only tiling windows will not be touched. And they should not! 
 - `ALT+CTRL+O` - Clean Exit application 
 
 ## Requirements
