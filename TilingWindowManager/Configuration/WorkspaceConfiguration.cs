@@ -29,6 +29,7 @@ namespace TilingWindowManager
         private const string CONFIG_FILE_NAME = "config.toml";
 
         public bool StackedOnStartup { get; private set; } = false;
+        public bool PausedOnStartup { get; private set; } = true;
 
         public bool LoadConfiguration()
         {
@@ -48,6 +49,7 @@ namespace TilingWindowManager
                 if (model.TryGetValue("workspace", out var workspaceObj) && workspaceObj is TomlTable workspaceTable)
                 {
                     StackedOnStartup = GetBoolValue(workspaceTable, "stacked_on_startup", StackedOnStartup);
+                    PausedOnStartup = GetBoolValue(workspaceTable, "paused_on_startup", PausedOnStartup);
                     return true;
                 }
                 else

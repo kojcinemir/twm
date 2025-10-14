@@ -889,7 +889,7 @@ namespace TilingWindowManager
 
             if (!currentWorkspace.IsPaused)
             {
-                // Unpausing - re-tile the workspace
+                // unpause - retile the windows
                 ApplyTilingToCurrentWorkspace(activeMonitor);
             }
 

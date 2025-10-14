@@ -103,6 +103,11 @@ namespace TilingWindowManager
                 {
                     workspace.EnableStackedMode();
                 }
+
+                if (workspaceConfig.PausedOnStartup && workspace.Id == 1)
+                {
+                    workspace.EnablePausedMode();
+                }
             }
         }
 
