@@ -84,7 +84,7 @@ allowed_owned_windows = ["frontrunner"]
 
 # Find free workspace on other monitor and move to it. Fallback to workspace 1 if all occupied. Works correctly in 2 monitor setup
     [hotkeys.switch_to_free_workspace_other_monitor]
-        key = "CTRL+F"
+        key = "ALT+CTRL+F"
         action = "switch_to_free_workspace_other_monitor"
 
 # Move active window from one monitor to other monitor at first free workspace. If all occupied fallback to 1. Works correcly in 2 monitor setup
