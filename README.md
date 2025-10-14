@@ -71,6 +71,7 @@ Don't kill application in the processes. Use default (ALT+CTRL+O) keybinding to 
 ### Layout Management
 - `ALT+SHIFT+S` - Toggle stacked mode
 - `ALT+S` - Cycle through stacked windows
+- `ALT+P` - Pause tiling on single workspace. Windows are still present in TWM but tiling is not performed, so the user can freely work in that workspace.
 
 ### Utility
 - `ALT+R` - Refresh active workspace tiling - Usefull to try and "retile" workspace if there is a issue.
