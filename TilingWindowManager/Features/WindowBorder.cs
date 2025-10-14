@@ -478,6 +478,8 @@ namespace TilingWindowManager
                     return;
                 }
 
+                HideAllBordersExcept(monitorHandle);
+
                 PositionBorderWindowsImproved(borderData, targetWindow);
                 ShowBorderForMonitor(borderData);
                 borderData.LastActiveWindow = targetWindow;
