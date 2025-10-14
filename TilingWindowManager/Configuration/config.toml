@@ -14,6 +14,7 @@ allowed_owned_windows = ["frontrunner"]
 # Workspace Settings
 [workspace]
     stacked_on_startup = false  # Set to true to start all workspaces in stacked mode by default
+    paused_on_startup = false    # Set to true to start the first workspace in paused mode (no tiling)
 
 # Logging Settings
 [logging]
