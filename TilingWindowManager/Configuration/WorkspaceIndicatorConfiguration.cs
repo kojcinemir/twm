@@ -45,6 +45,8 @@ namespace TilingWindowManager
         public uint BackupWorkspaceBorderColor { get; private set; } = 0xED9564;
         public uint BackupAndStackedWorkspaceColor { get; private set; } = 0x5a3a5a;
         public uint BackupAndStackedBorderColor { get; private set; } = 0xC77DC7;
+        public uint PausedWorkspaceColor { get; private set; } = 0x90EE90;
+        public uint PausedWorkspaceBorderColor { get; private set; } = 0x90EE90;
         public int OffsetFromTaskbarLeftEdge { get; private set; } = 0;
         public byte ActiveWorkspaceBorderOpacity { get; private set; } = 255;
 
@@ -87,6 +89,8 @@ namespace TilingWindowManager
                     BackupWorkspaceBorderColor = GetUintValue(indicatorTable, "backup_workspace_border_color", BackupWorkspaceBorderColor);
                     BackupAndStackedWorkspaceColor = GetUintValue(indicatorTable, "backup_and_stacked_workspace_color", BackupAndStackedWorkspaceColor);
                     BackupAndStackedBorderColor = GetUintValue(indicatorTable, "backup_and_stacked_border_color", BackupAndStackedBorderColor);
+                    PausedWorkspaceColor = GetUintValue(indicatorTable, "paused_workspace_color", PausedWorkspaceColor);
+                    PausedWorkspaceBorderColor = GetUintValue(indicatorTable, "paused_workspace_border_color", PausedWorkspaceBorderColor);
 
                     OffsetFromTaskbarLeftEdge = GetIntValue(indicatorTable, "offset_from_taskbar_left_edge", OffsetFromTaskbarLeftEdge);
                     ActiveWorkspaceBorderOpacity = GetByteValue(indicatorTable, "active_workspace_border_opacity", ActiveWorkspaceBorderOpacity);

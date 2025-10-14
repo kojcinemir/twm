@@ -193,6 +193,10 @@ namespace TilingWindowManager
                     CycleStackedWindow();
                     break;
 
+                case "toggle_paused_mode":
+                    TogglePausedMode();
+                    break;
+
                 case "exit_application":
                     Logger.Info("Exit hotkey pressed - cleaning up and terminating...");
                     Cleanup();

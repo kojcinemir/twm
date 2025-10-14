@@ -364,6 +364,11 @@ allowed_owned_windows = [""frontrunner""]
         key = ""ALT+S""
         action = ""cycle_stacked_window""
 
+# Toggle paused mode - windows can be moved freely without tiling
+    [hotkeys.toggle_paused_mode]
+        key = ""ALT+P""
+        action = ""toggle_paused_mode""
+
 # Will try to reload if some of the windows got lost in the tiling process. Still in the testing phase 
     [hotkeys.reload_allowed_owned_windows]
         key = ""ALT+SHIFT+R""
