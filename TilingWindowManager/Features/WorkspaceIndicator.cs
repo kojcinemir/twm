@@ -258,6 +258,7 @@ namespace TilingWindowManager
             public Dictionary<int, List<WorkspaceWindow>> WorkspaceWindows { get; set; } = new Dictionary<int, List<WorkspaceWindow>>();
             public HashSet<int> StackedModeWorkspaces { get; set; } = new HashSet<int>();
             public HashSet<int> BackupWorkspaces { get; set; } = new HashSet<int>();
+            public HashSet<int> PausedWorkspaces { get; set; } = new HashSet<int>();
             public int WindowX { get; set; } = 0;
             public int WindowY { get; set; } = 0;
             public int WindowWidth { get; set; } = 620;
@@ -372,6 +373,8 @@ namespace TilingWindowManager
         private uint BACKUP_WORKSPACE_BORDER_COLOR => config.BackupWorkspaceBorderColor;
         private uint BACKUP_AND_STACKED_WORKSPACE_COLOR => config.BackupAndStackedWorkspaceColor;
         private uint BACKUP_AND_STACKED_BORDER_COLOR => config.BackupAndStackedBorderColor;
+        private uint PAUSED_WORKSPACE_COLOR => config.PausedWorkspaceColor;
+        private uint PAUSED_WORKSPACE_BORDER_COLOR => config.PausedWorkspaceBorderColor;
         private int OFFSET_FROM_TASKBAR_LEFT_EDGE => config.OffsetFromTaskbarLeftEdge;
         private byte ACTIVE_WORKSPACE_BORDER_OPACITY => config.ActiveWorkspaceBorderOpacity;
         private int WINDOWS10_OFFSET_FROM_TASKBAR_RIGHT_EDGE => config.Windows10OffsetFromTaskbarRightEdge;
@@ -645,6 +648,7 @@ namespace TilingWindowManager
         {
             var workspaceHandles = new Dictionary<int, List<IntPtr>>();
             var stackedModeWorkspaces = new HashSet<int>();
+            var pausedWorkspaces = new HashSet<int>();
 
             foreach (var workspace in workspaces)
             {
@@ -653,15 +657,20 @@ namespace TilingWindowManager
                 {
                     stackedModeWorkspaces.Add(workspace.Id);
                 }
+                if (workspace.IsPaused)
+                {
+                    pausedWorkspaces.Add(workspace.Id);
+                }
             }
 
-            UpdateMonitorInternal(monitorIndex, currentWorkspaceId, workspaces, workspaceHandles, stackedModeWorkspaces, null);
+            UpdateMonitorInternal(monitorIndex, currentWorkspaceId, workspaces, workspaceHandles, stackedModeWorkspaces, null, pausedWorkspaces);
         }
 
         public void UpdateMonitor(int monitorIndex, int currentWorkspaceId, List<Workspace> workspaces, HashSet<int> backupWorkspaces)
         {
             var workspaceHandles = new Dictionary<int, List<IntPtr>>();
             var stackedModeWorkspaces = new HashSet<int>();
+            var pausedWorkspaces = new HashSet<int>();
 
             foreach (var workspace in workspaces)
             {
@@ -670,13 +679,17 @@ namespace TilingWindowManager
                 {
                     stackedModeWorkspaces.Add(workspace.Id);
                 }
+                if (workspace.IsPaused)
+                {
+                    pausedWorkspaces.Add(workspace.Id);
+                }
             }
 
-            UpdateMonitorInternal(monitorIndex, currentWorkspaceId, workspaces, workspaceHandles, stackedModeWorkspaces, backupWorkspaces);
+            UpdateMonitorInternal(monitorIndex, currentWorkspaceId, workspaces, workspaceHandles, stackedModeWorkspaces, backupWorkspaces, pausedWorkspaces);
         }
 
         private void UpdateMonitorInternal(int monitorIndex, int currentWorkspaceId, List<Workspace> workspaces,
-            Dictionary<int, List<IntPtr>> workspaceHandles, HashSet<int> stackedModeWorkspaces, HashSet<int>? backupWorkspaces)
+            Dictionary<int, List<IntPtr>> workspaceHandles, HashSet<int> stackedModeWorkspaces, HashSet<int>? backupWorkspaces, HashSet<int> pausedWorkspaces)
         {
             bool stateChanged = false;
             IntPtr indicatorHandle = IntPtr.Zero;
@@ -706,6 +719,13 @@ namespace TilingWindowManager
                     {
                         stateChanged = true;
                         indicatorData.BackupWorkspaces = newBackupWorkspaces;
+                    }
+
+                    // check if paused workspaces changed
+                    if (!indicatorData.PausedWorkspaces.SetEquals(pausedWorkspaces))
+                    {
+                        stateChanged = true;
+                        indicatorData.PausedWorkspaces = pausedWorkspaces;
                     }
 
                     foreach (var kvp in workspaceHandles)
@@ -1008,19 +1028,21 @@ namespace TilingWindowManager
 
                 SetBkMode(hdc, 1); // transparent
 
-                // get stacked mode and backup workspaces
+                // get stacked mode, backup workspaces, and paused workspaces
                 HashSet<int> stackedModeWorkspaces;
                 HashSet<int> backupWorkspaces;
+                HashSet<int> pausedWorkspaces;
                 lock (lockObject)
                 {
                     stackedModeWorkspaces = new HashSet<int>(indicatorData.StackedModeWorkspaces);
                     backupWorkspaces = new HashSet<int>(indicatorData.BackupWorkspaces);
+                    pausedWorkspaces = new HashSet<int>(indicatorData.PausedWorkspaces);
                 }
 
                 // draw all workspaces for this monitor
                 for (int i = 1; i <= Monitor.NO_OF_WORKSPACES; i++)
                 {
-                    DrawWorkspaceWithIcons(hdc, i, currentWS, currentWorkspaceWindows, stackedModeWorkspaces, backupWorkspaces, rect);
+                    DrawWorkspaceWithIcons(hdc, i, currentWS, currentWorkspaceWindows, stackedModeWorkspaces, backupWorkspaces, pausedWorkspaces, rect);
                 }
             }
             finally
@@ -1029,7 +1051,7 @@ namespace TilingWindowManager
             }
         }
 
-        private void DrawWorkspaceWithIcons(IntPtr hdc, int workspaceId, int currentWS, Dictionary<int, List<WorkspaceWindow>> allWorkspaces, HashSet<int> stackedModeWorkspaces, HashSet<int> backupWorkspaces, RECT clientRect)
+        private void DrawWorkspaceWithIcons(IntPtr hdc, int workspaceId, int currentWS, Dictionary<int, List<WorkspaceWindow>> allWorkspaces, HashSet<int> stackedModeWorkspaces, HashSet<int> backupWorkspaces, HashSet<int> pausedWorkspaces, RECT clientRect)
         {
             int index = workspaceId - 1;
             int x = WORKSPACE_MARGIN + (index * (WORKSPACE_WIDTH + WORKSPACE_MARGIN));
@@ -1037,10 +1059,13 @@ namespace TilingWindowManager
 
             bool isStackedMode = stackedModeWorkspaces.Contains(workspaceId);
             bool isBackupWorkspace = backupWorkspaces.Contains(workspaceId);
+            bool isPaused = pausedWorkspaces.Contains(workspaceId);
 
             // determine workspace background color
             uint workspaceBgColor;
-            if (isBackupWorkspace && isStackedMode)
+            if (isPaused)
+                workspaceBgColor = PAUSED_WORKSPACE_COLOR;
+            else if (isBackupWorkspace && isStackedMode)
                 workspaceBgColor = BACKUP_AND_STACKED_WORKSPACE_COLOR;
             else if (isBackupWorkspace)
                 workspaceBgColor = BACKUP_WORKSPACE_COLOR;
@@ -1066,13 +1091,15 @@ namespace TilingWindowManager
                 DrawWorkspaceNumber(hdc, x, y, workspaceId, currentWS, clientRect.Bottom - y - 5);
             }
 
-            // draw border for active workspace, stacked mode, or backup workspace
-            if (workspaceId == currentWS || isStackedMode || isBackupWorkspace)
+            // draw border for active workspace, stacked mode, backup workspace, or paused workspace
+            if (workspaceId == currentWS || isStackedMode || isBackupWorkspace || isPaused)
             {
                 // determine border color based on workspace state
                 uint borderColor;
                 if (workspaceId == currentWS)
                     borderColor = ACTIVE_WORKSPACE_BORDER_COLOR;
+                else if (isPaused)
+                    borderColor = PAUSED_WORKSPACE_BORDER_COLOR;
                 else if (isBackupWorkspace && isStackedMode)
                     borderColor = BACKUP_AND_STACKED_BORDER_COLOR;
                 else if (isBackupWorkspace)

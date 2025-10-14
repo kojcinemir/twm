@@ -864,6 +864,38 @@ namespace TilingWindowManager
             }
         }
 
+        private void TogglePausedMode()
+        {
+            var activeMonitor = GetActiveMonitor();
+            if (activeMonitor == null)
+            {
+                return;
+            }
+
+            var currentWorkspace = activeMonitor.GetCurrentWorkspace();
+            bool wasStackedMode = currentWorkspace.IsStackedMode;
+
+            if (!currentWorkspace.IsPaused)
+            {
+                if (wasStackedMode)
+                {
+                    // tile the windows before entering the pause mode
+                    currentWorkspace.DisableStackedMode();
+                    ApplyTilingToCurrentWorkspace(activeMonitor);
+                }
+            }
+
+            currentWorkspace.TogglePausedMode();
+
+            if (!currentWorkspace.IsPaused)
+            {
+                // Unpausing - re-tile the workspace
+                ApplyTilingToCurrentWorkspace(activeMonitor);
+            }
+
+            UpdateWorkspaceIndicator();
+        }
+
         private void ApplyStackedLayout(Monitor monitor, Workspace workspace)
         {
             var windows = workspace.GetStackableWindows();

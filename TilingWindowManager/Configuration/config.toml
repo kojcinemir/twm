@@ -35,6 +35,8 @@ allowed_owned_windows = ["frontrunner"]
     inactive_workspace_text_color = 0xFFFFFF
     stacked_mode_workspace_color = 0x2a4a7c
     stacked_mode_border_color = 0x2a4a7c
+    paused_workspace_color = 0x90EE90
+    paused_workspace_border_color = 0x90EE90
     offset_from_taskbar_left_edge = 0
     active_workspace_border_opacity = 255
 
@@ -113,6 +115,11 @@ allowed_owned_windows = ["frontrunner"]
     [hotkeys.cycle_stacked_window]
         key = "ALT+S"
         action = "cycle_stacked_window"
+
+# Toggle paused mode
+    [hotkeys.toggle_paused_mode]
+        key = "ALT+P"
+        action = "toggle_paused_mode"
 
 # Will try to reload if some of the windows got lost in the tiling process. Still in the testing phase 
     [hotkeys.reload_allowed_owned_windows]

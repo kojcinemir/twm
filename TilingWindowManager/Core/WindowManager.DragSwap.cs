@@ -186,7 +186,7 @@ namespace TilingWindowManager
                             foreach (var monitor in monitors)
                             {
                                 var workspace = monitor.FindWorkspaceContaining(window);
-                                if (workspace != null)
+                                if (workspace != null && !workspace.IsPaused)
                                 {
                                     workspace.GetTiling()?.RepositionWindowToOriginalState(window);
                                     break;
@@ -246,7 +246,7 @@ namespace TilingWindowManager
                         foreach (var monitor in monitors)
                         {
                             var workspace = monitor.FindWorkspaceContaining(window);
-                            if (workspace != null)
+                            if (workspace != null && !workspace.IsPaused)
                             {
                                 workspace.GetTiling()?.RepositionWindowToOriginalState(window);
                                 break;
@@ -259,7 +259,7 @@ namespace TilingWindowManager
                     foreach (var monitor in monitors)
                     {
                         var workspace = monitor.FindWorkspaceContaining(window);
-                        if (workspace != null)
+                        if (workspace != null && !workspace.IsPaused)
                         {
                             workspace.GetTiling()?.RepositionWindowToOriginalState(window);
                             break;
@@ -543,7 +543,7 @@ namespace TilingWindowManager
             foreach (var monitor in monitors)
             {
                 var workspace = monitor.FindWorkspaceContaining(window);
-                if (workspace != null)
+                if (workspace != null && !workspace.IsPaused)
                 {
                     workspace.GetTiling()?.RepositionWindowToOriginalState(window);
                     break;

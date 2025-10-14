@@ -36,9 +36,11 @@ namespace TilingWindowManager
         private nint lastActiveWindow = nint.Zero;
         private bool isStackedMode = false;
         private int currentStackedWindowIndex = 0;
+        private bool isPaused = false;
 
         public int WindowCount => windows.Count;
         public bool IsStackedMode => isStackedMode;
+        public bool IsPaused => isPaused;
 
         public Workspace(int id, int monitorIndex)
         {
@@ -72,13 +74,16 @@ namespace TilingWindowManager
         public void AddWindow(nint window)
         {
             windows.AddWindow(window);
-            bspTiling?.AddWindow(window);
+            if (!isPaused)
+            {
+                bspTiling?.AddWindow(window);
+            }
         }
 
         public bool RemoveWindow(nint window)
         {
             bool removed = windows.RemoveWindow(window);
-            if (removed)
+            if (removed && !isPaused)
             {
                 bspTiling?.RemoveWindow(window);
             }
@@ -138,7 +143,10 @@ namespace TilingWindowManager
 
         public void ApplyTiling()
         {
-            bspTiling?.TileWindows();
+            if (!isPaused)
+            {
+                bspTiling?.TileWindows();
+            }
         }
 
         public nint GetWindowInDirection(nint currentWindow, BSPTiling.FocusDirection direction)
@@ -214,6 +222,28 @@ namespace TilingWindowManager
             else
             {
                 EnableStackedMode();
+            }
+        }
+
+        public void EnablePausedMode()
+        {
+            isPaused = true;
+        }
+
+        public void DisablePausedMode()
+        {
+            isPaused = false;
+        }
+
+        public void TogglePausedMode()
+        {
+            if (isPaused)
+            {
+                DisablePausedMode();
+            }
+            else
+            {
+                EnablePausedMode();
             }
         }
 
