@@ -201,10 +201,8 @@ namespace TilingWindowManager
                     }
                     else
                     {
-                        // no valid swap target found -> check if we can move to an empty workspace
                         if (!GetCursorPos(out POINT cursorPos))
                         {
-                            //cursor position not identified, restoring back
                             RestoreWindowToOriginalPosition(window);
                             return;
                         }
@@ -214,11 +212,11 @@ namespace TilingWindowManager
 
                         if (targetMonitor != null)
                         {
-                            var targetWorkspace = targetMonitor.GetCurrentWorkspace();
+                            var sourceMonitor = GetMonitorByHandle(monitorHandleOnDragStart);
 
-                            if (targetWorkspace.WindowCount == 0)
+                            if (sourceMonitor != null && targetMonitor.Index != sourceMonitor.Index)
                             {
-                                var sourceMonitor = GetMonitorByHandle(monitorHandleOnDragStart);
+                                var targetWorkspace = targetMonitor.GetCurrentWorkspace();
 
                                 foreach (var monitor in monitors)
                                 {
@@ -227,15 +225,18 @@ namespace TilingWindowManager
                                 }
 
                                 targetMonitor.AddWindowToCurrentWorkspace(window);
+                                targetWorkspace.SetLastActiveWindow(window);
+
+                                MoveWindowToMonitor(window, targetMonitor);
 
 								ApplyTilingToCurrentWorkspace(sourceMonitor);
 								ApplyTilingToCurrentWorkspace(targetMonitor);
 
+                                UpdateWorkspaceIndicator();
                                 monitorHandleOnDragStart = 0;
                                 return;
                             }
                         }
-                        // if got to this line something is wrong , restore to original
                         RestoreWindowToOriginalPosition(window);
                     }
                 }
@@ -358,14 +359,21 @@ namespace TilingWindowManager
         {
             try
             {
-                nint monitorHandle = MonitorFromWindow(draggedWindow, MONITOR_DEFAULTTONEAREST);
-                var monitor = GetMonitorByHandle(monitorHandle);
-                if (monitor == null)
+                var sourceMonitor = GetMonitorByHandle(monitorHandleOnDragStart);
+                if (sourceMonitor == null)
                 {
                     return nint.Zero;
                 }
 
-                var currentWorkspace = monitor.GetCurrentWorkspace();
+                nint cursorMonitorHandle = MonitorFromPoint(cursorPos, MONITOR_DEFAULTTONEAREST);
+                var cursorMonitor = GetMonitorByHandle(cursorMonitorHandle);
+
+                if (cursorMonitor != null && cursorMonitor.Index != sourceMonitor.Index)
+                {
+                    return nint.Zero;
+                }
+
+                var currentWorkspace = sourceMonitor.GetCurrentWorkspace();
                 var tiledWindows = currentWorkspace.GetTileableWindows().Where(w =>
                     w != draggedWindow &&
                     IsWindowVisible(w)).ToList();
@@ -448,8 +456,16 @@ namespace TilingWindowManager
                         sourceMonitor.AddWindowToCurrentWorkspace(targetWindow);
                         targetMonitor.AddWindowToCurrentWorkspace(sourceWindow);
 
+                        sourceMonitor.GetCurrentWorkspace().SetLastActiveWindow(targetWindow);
+                        targetMonitor.GetCurrentWorkspace().SetLastActiveWindow(sourceWindow);
+
+                        MoveWindowToMonitor(sourceWindow, targetMonitor);
+                        MoveWindowToMonitor(targetWindow, sourceMonitor);
+
 						ApplyTilingToCurrentWorkspace(sourceMonitor);
 						ApplyTilingToCurrentWorkspace(targetMonitor);
+
+                        UpdateWorkspaceIndicator();
                     }
 
                     monitorHandleOnDragStart = 0;

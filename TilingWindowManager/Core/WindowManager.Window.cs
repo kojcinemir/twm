@@ -497,9 +497,12 @@ namespace TilingWindowManager
             {
                 SuspendBorder(window);
 
+                var sourceWorkspace = sourceMonitor.FindWorkspaceContaining(window);
                 sourceMonitor.RemoveWindowFromAllWorkspaces(window);
-			targetMonitor.AddWindowToCurrentWorkspace(window);
-			targetMonitor.GetCurrentWorkspace().SetLastActiveWindow(window);
+                targetMonitor.AddWindowToCurrentWorkspace(window);
+                targetMonitor.GetCurrentWorkspace().SetLastActiveWindow(window);
+
+                MoveWindowToMonitor(window, targetMonitor);
 
                 globalActiveMonitorIndex = targetMonitor.Index;
                 lastActiveMonitorIndex = targetMonitor.Index;
@@ -508,8 +511,9 @@ namespace TilingWindowManager
 
                 RefreshBorder(window);
 
+                UpdateWorkspaceIndicator();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 if (!sourceMonitor.IsWindowInCurrentWorkspace(window))
                 {
