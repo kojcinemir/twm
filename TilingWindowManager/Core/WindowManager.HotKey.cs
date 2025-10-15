@@ -59,8 +59,24 @@ namespace TilingWindowManager
                         int targetWorkspaceId = ExtractWorkspaceNumberFromHotkey(hotkeyEntry);
                         if (targetWorkspaceId >= 1 && targetWorkspaceId <= 8)
                         {
-                            lastActiveMonitorIndex = activeMonitor.Index;
-                            SwitchToWorkspace(targetWorkspaceId, activeMonitor.Index);
+                            nint focusedWindow = GetForegroundWindow();
+                            Monitor targetMonitor = activeMonitor;
+
+                            if (focusedWindow != nint.Zero)
+                            {
+                                foreach (var monitor in monitors)
+                                {
+                                    var workspace = monitor.FindWorkspaceContaining(focusedWindow);
+                                    if (workspace != null)
+                                    {
+                                        targetMonitor = monitor;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            lastActiveMonitorIndex = targetMonitor.Index;
+                            SwitchToWorkspace(targetWorkspaceId, targetMonitor.Index);
                         }
                     }
                     break;
