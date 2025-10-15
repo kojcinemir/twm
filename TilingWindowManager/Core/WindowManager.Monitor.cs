@@ -56,21 +56,15 @@ namespace TilingWindowManager
 
         private Monitor GetActiveMonitor()
         {
-            var trackedMonitor = GetMonitorByIndex(globalActiveMonitorIndex);
-            if (trackedMonitor != null)
-            {
-                return trackedMonitor;
-            }
 
-            nint activeWindow = GetForegroundWindow();
-            if (activeWindow != nint.Zero)
+            if (GetCursorPos(out POINT cursorPos))
             {
-                nint monitorHandle = MonitorFromWindow(activeWindow, MONITOR_DEFAULTTONEAREST);
-                var monitor = GetMonitorByHandle(monitorHandle);
-                if (monitor != null)
+                nint cursorMonitorHandle = MonitorFromPoint(cursorPos, MONITOR_DEFAULTTONEAREST);
+                var cursorMonitor = GetMonitorByHandle(cursorMonitorHandle);
+                if (cursorMonitor != null)
                 {
-                    globalActiveMonitorIndex = monitor.Index;
-                    return monitor;
+                    globalActiveMonitorIndex = cursorMonitor.Index;
+                    return cursorMonitor;
                 }
             }
 
