@@ -39,7 +39,6 @@ namespace TilingWindowManager
 
         private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
-        private static readonly int[] WS_EX_STYLES_TO_IGNORE = {              };
         public void SwitchFocus(BSPTiling.FocusDirection direction)
         {
             nint currentWindow = GetForegroundWindow();
@@ -271,19 +270,32 @@ namespace TilingWindowManager
         }
         private bool IsValidApplicationWindow(nint hWnd)
         {
-            if (!IsWindowVisible(hWnd)) return false;
-            if (GetWindow(hWnd, GW_OWNER) != nint.Zero) return false;
 
-            int exStyle = GetWindowLong(hWnd, GWL_STYLE);
-            foreach(int value in WS_EX_STYLES_TO_IGNORE)
+            if (!IsWindowVisible(hWnd)) return false;
+
+            uint exStyle = (uint)GetWindowLong(hWnd, GWL_EXSTYLE);
+
+            if ((exStyle & WS_EX_TOOLWINDOW) != 0)
             {
-                if (value == exStyle)
-                {
-                    return false;
-                }
+                return false;
             }
-            string title = GetWindowTitle(hWnd);
-            if (string.IsNullOrWhiteSpace(title) || title.Length < 2) return false;
+
+            if ((exStyle & WS_EX_APPWINDOW) != 0)
+            {
+                string title = GetWindowTitle(hWnd);
+                return !string.IsNullOrWhiteSpace(title) && title.Length >= 2;
+            }
+
+            if (GetWindow(hWnd, GW_OWNER) != nint.Zero)
+            {
+                return false;
+            }
+
+            string windowTitle = GetWindowTitle(hWnd);
+            if (string.IsNullOrWhiteSpace(windowTitle) || windowTitle.Length < 2)
+            {
+                return false;
+            }
 
             return true;
         }
