@@ -268,16 +268,60 @@ namespace TilingWindowManager
 
         public bool IsValidApplicationWindow(IntPtr hWnd, bool allowUntitled = false, int minWidth = 48, int minHeight = 48, double requireAreaShare = 0.5)
         {
+
             if (hWnd == IntPtr.Zero) return false;
             if (!IsWindow(hWnd)) return false;
             if (!IsWindowVisible(hWnd)) return false;
 
-            // exclude application window when running debug mode
 #if !DEBUG
             if (hWnd == _currentProcessMainWindow && _currentProcessMainWindow != IntPtr.Zero) return false;
 #endif
 
             if (GetAncestor(hWnd, GA_ROOT) != hWnd) return false;
+
+            long exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
+
+            if ((exStyle & WS_EX_TOOLWINDOW) != 0) return false;
+
+            if ((exStyle & WS_EX_NOACTIVATE) != 0) return false;
+
+            try
+            {
+                if (DwmGetWindowAttribute(hWnd, DWMWA_CLOAKED, out int cloaked, Marshal.SizeOf(typeof(int))) == 0 && cloaked != 0)
+                    return false;
+            }
+            catch
+            {
+            }
+
+            var classNameSb = new StringBuilder(256);
+            GetClassName(hWnd, classNameSb, classNameSb.Capacity);
+            string cls = classNameSb.ToString();
+            if (!string.IsNullOrEmpty(cls))
+            {
+                string lc = cls.ToLowerInvariant();
+                if (lc == "shell_traywnd" || lc == "traynotifywnd" || lc == "progman" || lc == "workerw")
+                    return false;
+            }
+
+            if ((exStyle & WS_EX_APPWINDOW) != 0)
+            {
+                int len = GetWindowTextLength(hWnd);
+                if (len == 0 && !allowUntitled) return false;
+                if (len > 0)
+                {
+                    var sb = new StringBuilder(len + 1);
+                    GetWindowText(hWnd, sb, sb.Capacity);
+                    if (string.IsNullOrWhiteSpace(sb.ToString()) && !allowUntitled) return false;
+                }
+
+                if (!GetWindowRect(hWnd, out RECT r)) return false;
+                int width = Math.Max(0, r.Right - r.Left);
+                int height = Math.Max(0, r.Bottom - r.Top);
+                if (width < minWidth || height < minHeight) return false;
+
+                return true;
+            }
 
             if (GetWindow(hWnd, GW_OWNER) != IntPtr.Zero)
             {
@@ -293,50 +337,24 @@ namespace TilingWindowManager
                 }
                 catch
                 {
-                    return false; 
+                    return false;
                 }
             }
 
-            // extended styles
-            long exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
-            if ((exStyle & WS_EX_TOOLWINDOW) != 0) return false;
-            if ((exStyle & WS_EX_NOACTIVATE) != 0) return false;
-
-            try
+            int titleLen = GetWindowTextLength(hWnd);
+            if (titleLen == 0 && !allowUntitled) return false;
+            if (titleLen > 0)
             {
-                if (DwmGetWindowAttribute(hWnd, DWMWA_CLOAKED, out int cloaked, Marshal.SizeOf(typeof(int))) == 0 && cloaked != 0)
-                    return false;
-            }
-            catch
-            {
-            }
-
-            // exclude taskbar/desktop/tray helper classes
-            var classNameSb = new StringBuilder(256);
-            GetClassName(hWnd, classNameSb, classNameSb.Capacity);
-            string cls = classNameSb.ToString();
-            if (!string.IsNullOrEmpty(cls))
-            {
-                string lc = cls.ToLowerInvariant();
-                if (lc == "shell_traywnd" || lc == "traynotifywnd" || lc == "progman" || lc == "workerw")
-                    return false;
-            }
-
-            int len = GetWindowTextLength(hWnd);
-            if (len == 0 && !allowUntitled) return false;
-            if (len > 0)
-            {
-                var sb = new StringBuilder(len + 1);
+                var sb = new StringBuilder(titleLen + 1);
                 GetWindowText(hWnd, sb, sb.Capacity);
                 if (string.IsNullOrWhiteSpace(sb.ToString()) && !allowUntitled) return false;
             }
 
-            if (!GetWindowRect(hWnd, out RECT r)) return false;
-            int width = Math.Max(0, r.Right - r.Left);
-            int height = Math.Max(0, r.Bottom - r.Top);
-            if (width < minWidth || height < minHeight) return false;
+            if (!GetWindowRect(hWnd, out RECT rect)) return false;
+            int windowWidth = Math.Max(0, rect.Right - rect.Left);
+            int windowHeight = Math.Max(0, rect.Bottom - rect.Top);
+            if (windowWidth < minWidth || windowHeight < minHeight) return false;
 
-            // get largest top-level window for the process
             GetWindowThreadProcessId(hWnd, out uint pidU);
             int pid = (int)pidU;
             Process? proc = null;
@@ -356,11 +374,10 @@ namespace TilingWindowManager
                 var windows = GetTopLevelWindowsForProcess(pid);
                 if (windows.Count == 0)
                 {
-                    // no other windows found for process -> accept current
                     return true;
                 }
 
-                long thisArea = (long)width * height;
+                long thisArea = (long)windowWidth * windowHeight;
                 long maxArea = 0;
                 foreach (var w in windows)
                 {
@@ -371,14 +388,11 @@ namespace TilingWindowManager
                     }
                 }
 
-                // if this window is the largest or large enough relative to the largest one -> accept
-                if (maxArea == 0) return true; // cant compute area; accept it on pure luck
+                if (maxArea == 0) return true; 
                 if (thisArea >= maxArea * requireAreaShare) return true;
 
-                // otherwise assuming its popup or dialog 
                 return false;
             }
-
             return true;
         }
 
@@ -392,9 +406,15 @@ namespace TilingWindowManager
 
                 if (!IsWindowVisible(hWnd)) return true;
                 if (GetAncestor(hWnd, GA_ROOT) != hWnd) return true;
-                if (GetWindow(hWnd, GW_OWNER) != IntPtr.Zero) return true;
+
                 long exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
+
                 if ((exStyle & WS_EX_TOOLWINDOW) != 0) return true;
+
+                bool hasAppWindow = (exStyle & WS_EX_APPWINDOW) != 0;
+
+                if (GetWindow(hWnd, GW_OWNER) != IntPtr.Zero && !hasAppWindow) return true;
+
                 try
                 {
                     if (DwmGetWindowAttribute(hWnd, DWMWA_CLOAKED, out int cloaked, Marshal.SizeOf(typeof(int))) == 0 && cloaked != 0)
