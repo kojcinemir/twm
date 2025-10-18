@@ -533,16 +533,33 @@ namespace TilingWindowManager
                 var workspaceConfig = new WorkspaceConfiguration();
                 workspaceConfig.LoadConfiguration();
 
-                if (workspaceConfig.StackedOnStartup)
+                // apply workspace modes from configuration
+                foreach (var monitor in monitors)
                 {
-                    foreach (var monitor in monitors)
+                    foreach (var workspace in monitor.GetAllWorkspaces())
                     {
-                        foreach (var workspace in monitor.GetAllWorkspaces())
+                        WorkspaceMode mode = workspaceConfig.GetWorkspaceMode(workspace.Id);
+
+                        if (workspace.IsStackedMode)
                         {
-                            if (!workspace.IsStackedMode)
-                            {
+                            workspace.DisableStackedMode();
+                        }
+                        if (workspace.IsPaused)
+                        {
+                            workspace.DisablePausedMode();
+                        }
+
+                        switch (mode)
+                        {
+                            case WorkspaceMode.Stacked:
                                 workspace.EnableStackedMode();
-                            }
+                                break;
+                            case WorkspaceMode.Paused:
+                                workspace.EnablePausedMode();
+                                break;
+                            case WorkspaceMode.Tiled:
+                            default:
+                                break;
                         }
                     }
                 }

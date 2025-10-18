@@ -12,9 +12,17 @@
 allowed_owned_windows = ["frontrunner"]
 
 # Workspace Settings
+# Options: "tiled", "stacked", "paused"
+# If not specified, workspace defaults to "tiled"
 [workspace]
-    stacked_on_startup = false  # Set to true to start all workspaces in stacked mode by default
-    paused_on_startup = false    # Set to true to start the first workspace in paused mode (no tiling)
+    workspace_1 = "tiled"     # Workspace 1: tiled mode 
+    workspace_2 = "tiled"     # Workspace 2: tiled mode 
+    # workspace_3 = "stacked" # Workspace 3: stacked mode (all windows stacked, cycle with ALT+S)
+    # workspace_4 = "paused"  # Workspace 4: paused mode (no automatic tiling)
+    # workspace_5 = "tiled"   # Workspace 5: tiled mode 
+    # workspace_6 = "tiled"   # Workspace 6: tiled mode 
+    # workspace_7 = "tiled"   # Workspace 7: tiled mode 
+    # workspace_8 = "tiled"   # Workspace 8: tiled mode 
 
 # Logging Settings
 [logging]
