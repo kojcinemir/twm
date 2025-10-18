@@ -277,6 +277,19 @@ namespace TilingWindowManager
                                 ApplyTilingToCurrentWorkspace(targetMonitor);
                             }
                         }
+                        else
+                        {
+                            // window is pinned  to different workspace. switch to that workspace and apply tiling
+                            var pinnedWorkspaceObj = targetMonitor.GetWorkspace(pinnedWorkspace.Value);
+                            pinnedWorkspaceObj?.HideWindow(e.WindowHandle);
+                            
+                            SwitchToWorkspace(pinnedWorkspace.Value, targetMonitor.Index);
+                            
+                            if (pinnedWorkspaceObj != null)
+                            {
+                                ApplyTilingToWorkspace(pinnedWorkspaceObj);
+                            }
+                        }
                     }
                     else
                     {
@@ -761,7 +774,8 @@ namespace TilingWindowManager
             {
                 GetWindowThreadProcessId(window, out uint processId);
                 using var process = System.Diagnostics.Process.GetProcessById((int)processId);
-                return Path.GetFileName(process.ProcessName + ".exe");
+                string processName = process.ProcessName;
+                return processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? processName : processName + ".exe";
             }
             catch (Exception ex)
             {

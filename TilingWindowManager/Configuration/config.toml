@@ -63,7 +63,7 @@ allowed_owned_windows = ["frontrunner"]
 
 # Pinned Applications - Applications that should always appear on specific workspaces
 [pinned_applications]
-    #"Notepad.exe" = 8
+    "slack.exe" = 8
     #"chrome.exe" = 1
 
 # Application Hotkeys - Hotkeys to switch to workspace containing specific applications

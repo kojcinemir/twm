@@ -91,7 +91,8 @@ namespace TilingWindowManager
             if (string.IsNullOrEmpty(executableName))
                 return null;
 
-            return _pinnedApplications.TryGetValue(executableName, out int workspace) ? workspace : null;
+            string normalizedName = executableName.ToLowerInvariant();
+            return _pinnedApplications.TryGetValue(normalizedName, out int workspace) ? workspace : null;
         }
 
         public bool IsApplicationPinned(string executableName)
