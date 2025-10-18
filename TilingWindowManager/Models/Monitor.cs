@@ -99,14 +99,18 @@ namespace TilingWindowManager
             {
                 workspace.InitializeTiling(WorkArea);
 
-                if (workspaceConfig.StackedOnStartup)
+                WorkspaceMode mode = workspaceConfig.GetWorkspaceMode(workspace.Id);
+                switch (mode)
                 {
-                    workspace.EnableStackedMode();
-                }
-
-                if (workspaceConfig.PausedOnStartup && workspace.Id == 1)
-                {
-                    workspace.EnablePausedMode();
+                    case WorkspaceMode.Stacked:
+                        workspace.EnableStackedMode();
+                        break;
+                    case WorkspaceMode.Paused:
+                        workspace.EnablePausedMode();
+                        break;
+                    case WorkspaceMode.Tiled:
+                    default:
+                        break;
                 }
             }
         }

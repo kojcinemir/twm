@@ -18,18 +18,25 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Tomlyn;
 using Tomlyn.Model;
 
 namespace TilingWindowManager
 {
+    public enum WorkspaceMode
+    {
+        Tiled,
+        Stacked,
+        Paused
+    }
+
     public class WorkspaceConfiguration
     {
         private const string CONFIG_FILE_NAME = "config.toml";
 
-        public bool StackedOnStartup { get; private set; } = false;
-        public bool PausedOnStartup { get; private set; } = true;
+        private Dictionary<int, WorkspaceMode> workspaceModes = new Dictionary<int, WorkspaceMode>();
 
         public bool LoadConfiguration()
         {
@@ -48,15 +55,11 @@ namespace TilingWindowManager
 
                 if (model.TryGetValue("workspace", out var workspaceObj) && workspaceObj is TomlTable workspaceTable)
                 {
-                    StackedOnStartup = GetBoolValue(workspaceTable, "stacked_on_startup", StackedOnStartup);
-                    PausedOnStartup = GetBoolValue(workspaceTable, "paused_on_startup", PausedOnStartup);
+                    LoadWorkspaceModes(workspaceTable);
                     return true;
                 }
-                else
-                {
-                    // No workspace section found, use defaults
-                    return false;
-                }
+
+                return false;
             }
             catch (Exception ex)
             {
@@ -65,16 +68,41 @@ namespace TilingWindowManager
             }
         }
 
-        private bool GetBoolValue(TomlTable table, string key, bool defaultValue)
+        private void LoadWorkspaceModes(TomlTable workspaceTable)
         {
-            if (table.TryGetValue(key, out var value))
+            workspaceModes.Clear();
+
+            for (int i = 1; i <= 8; i++)
             {
-                if (value is bool boolValue)
-                    return boolValue;
-                if (bool.TryParse(value.ToString(), out var parsedValue))
-                    return parsedValue;
+                string key = $"workspace_{i}";
+                if (workspaceTable.TryGetValue(key, out var modeValue))
+                {
+                    string modeStr = modeValue.ToString()?.ToLower() ?? "";
+                    WorkspaceMode mode = ParseWorkspaceMode(modeStr);
+                    workspaceModes[i] = mode;
+                }
             }
-            return defaultValue;
+        }
+
+        private WorkspaceMode ParseWorkspaceMode(string modeStr)
+        {
+            return modeStr switch
+            {
+                "tiled" => WorkspaceMode.Tiled,
+                "stacked" => WorkspaceMode.Stacked,
+                "paused" => WorkspaceMode.Paused,
+                _ => WorkspaceMode.Tiled
+            };
+        }
+
+        public WorkspaceMode GetWorkspaceMode(int workspaceId)
+        {
+            if (workspaceModes.TryGetValue(workspaceId, out var mode))
+            {
+                return mode;
+            }
+
+            return WorkspaceMode.Tiled;
         }
     }
 }
