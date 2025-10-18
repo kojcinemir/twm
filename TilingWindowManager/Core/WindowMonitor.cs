@@ -217,6 +217,14 @@ namespace TilingWindowManager
             }
             _winEventProc = null!;
         }
+
+        public void TrackExistingWindow(nint windowHandle)
+        {
+            if (windowHandle != nint.Zero && !trackedWindows.Contains(windowHandle))
+            {
+                trackedWindows.Add(windowHandle);
+            }
+        }
         private void WinEventProc(nint hWinEventHook, uint eventType, nint hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             if (idObject != OBJID_WINDOW || idChild != CHILDID_SELF || hwnd == nint.Zero)

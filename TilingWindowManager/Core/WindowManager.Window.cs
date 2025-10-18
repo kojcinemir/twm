@@ -111,7 +111,9 @@ namespace TilingWindowManager
             nint windowToFocus = nint.Zero;
 
             nint lastActive = workspace.GetLastActiveWindow();
-            if (lastActive != nint.Zero && workspace.ContainsWindow(lastActive) && IsWindowVisible(lastActive))
+            // in paused mode, skip minimized windows
+            if (lastActive != nint.Zero && workspace.ContainsWindow(lastActive) && IsWindowVisible(lastActive) &&
+                (!workspace.IsPaused || !IsIconic(lastActive)))
             {
                 windowToFocus = lastActive;
             }
@@ -119,7 +121,9 @@ namespace TilingWindowManager
             {
                 // fall back to root window -> first window in BPS tree
                 nint rootWindow = workspace.GetRootWindow();
-                if (rootWindow != nint.Zero && workspace.ContainsWindow(rootWindow) && IsWindowVisible(rootWindow))
+                // in paused mode, skip minimized windows
+                if (rootWindow != nint.Zero && workspace.ContainsWindow(rootWindow) && IsWindowVisible(rootWindow) &&
+                    (!workspace.IsPaused || !IsIconic(rootWindow)))
                 {
                     windowToFocus = rootWindow;
                 }
@@ -127,6 +131,11 @@ namespace TilingWindowManager
                 {
                     // focus first available tilable window if nothing else can be selected
                     var tileableWindows = workspace.GetTileableWindows();
+                    // in paused mode, filter out minimized windows
+                    if (workspace.IsPaused)
+                    {
+                        tileableWindows = tileableWindows.Where(w => !IsIconic(w)).ToList();
+                    }
                     if (tileableWindows.Count > 0)
                     {
                         windowToFocus = tileableWindows[0];
@@ -136,26 +145,37 @@ namespace TilingWindowManager
 
             if (windowToFocus != nint.Zero)
             {
-                FocusWindow(windowToFocus);
+                FocusWindow(windowToFocus, workspace);
             }
         }
 
-        private void FocusWindow(nint window)
+        private void FocusWindow(nint window, Workspace? workspace = null)
         {
             try
             {
-                ShowWindow(window, SW_RESTORE);
+                // find workspace if not provided
+                if (workspace == null)
+                {
+                    foreach (var monitor in monitors)
+                    {
+                        workspace = monitor.FindWorkspaceContaining(window);
+                        if (workspace != null)
+                            break;
+                    }
+                }
+
+                // in paused mode don't restore minimised windows
+                if (workspace == null || !workspace.IsPaused || !IsIconic(window))
+                {
+                    ShowWindow(window, SW_RESTORE);
+                }
+
                 SetForegroundWindow(window);
                 BringWindowToTop(window);
 
-                foreach (var monitor in monitors)
+                if (workspace != null)
                 {
-                    var workspace = monitor.FindWorkspaceContaining(window);
-                    if (workspace != null)
-                    {
-                        workspace.SetLastActiveWindow(window);
-                        break;
-                    }
+                    workspace.SetLastActiveWindow(window);
                 }
             }
             catch (Exception)

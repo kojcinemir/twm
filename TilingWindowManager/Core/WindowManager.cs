@@ -769,6 +769,13 @@ namespace TilingWindowManager
 
             EnumWindows(enumWindowsProc, nint.Zero);
 
+            // track all pre-existing windows so destroy events are properly handled
+            // important when starting up TWM while there are open windows
+            foreach (var window in allWindows)
+            {
+                windowMonitor.TrackExistingWindow(window);
+            }
+
             int movedCount = 0;
             foreach (var window in allWindows)
             {
