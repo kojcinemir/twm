@@ -53,6 +53,19 @@ allowed_owned_windows = ["frontrunner"]
     # use_windows10_positioning = true
     windows10_offset_from_taskbar_right_edge = 120
 
+    # Stacked App Display Settings (shown when workspace is in stacked mode)
+    show_stacked_app_title = false               # Show title text next to icon (true) or just icon (false)
+    stacked_app_icon_size = 24                   # Size of application icons in pixels
+    stacked_app_item_width = 150                 # Width of each app item when showing icon + title
+    stacked_app_item_width_icon_only = 40        # Width of each app item when showing icon only
+    stacked_app_title_max_length = 15            # Maximum characters for title before truncation
+    stacked_app_margin = 2                       # Margin between stacked app items
+    stacked_app_background_color = 0x2a2a2a      # Background color for inactive stacked apps
+    stacked_app_hover_color = 0x3a3a3a           # Background color when hovering over a stacked app
+    stacked_app_active_color = 0x4a4a7c          # Background color for currently visible stacked app
+    stacked_app_text_color = 0xFFFFFF            # Text color for inactive stacked apps
+    stacked_app_active_text_color = 0xFB923C     # Text color for currently visible stacked app
+
 # Window Border Settings
 [window_border]
     border_width = 4

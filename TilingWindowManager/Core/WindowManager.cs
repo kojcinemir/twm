@@ -499,7 +499,11 @@ namespace TilingWindowManager
         private void InitializeWorkspaceIndicators()
         {
 
-            Monitor.InitializeWorkspaceIndicator(monitors, (monitorIndex, workspaceId) => SwitchToWorkspace(workspaceId, monitorIndex));
+            Monitor.InitializeWorkspaceIndicator(
+                monitors,
+                (monitorIndex, workspaceId) => SwitchToWorkspace(workspaceId, monitorIndex),
+                (monitorIndex, stackedAppIndex) => SwitchToStackedWindow(stackedAppIndex, monitorIndex)
+            );
 
             foreach (var monitor in monitors)
             {
