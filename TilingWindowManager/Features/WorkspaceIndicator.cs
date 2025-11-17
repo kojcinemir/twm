@@ -162,6 +162,9 @@ namespace TilingWindowManager
         [DllImport("user32.dll")]
         private static extern bool InvalidateRect(IntPtr hWnd, IntPtr lpRect, bool bErase);
 
+        [DllImport("user32.dll")]
+        private static extern bool InvalidateRect(IntPtr hWnd, ref RECT lpRect, bool bErase);
+
         [DllImport("msimg32.dll")]
         private static extern bool AlphaBlend(IntPtr hdcDest, int nXOriginDest, int nYOriginDest,
             int nWidthDest, int nHeightDest, IntPtr hdcSrc, int nXOriginSrc, int nYOriginSrc,
@@ -238,6 +241,7 @@ namespace TilingWindowManager
         private const int WM_SETCURSOR = 0x0020;
         private const int WM_GETICON = 0x007F;
         private const int WM_SETTINGCHANGE = 0x001A;
+        private const int WM_ERASEBKGND = 0x0014;
         private const int ICON_SMALL = 0;
         private const int ICON_BIG = 1;
         private const int IDC_HAND = 32649;
@@ -500,7 +504,7 @@ namespace TilingWindowManager
                     hInstance = moduleHandle,
                     hIcon = IntPtr.Zero,
                     hCursor = LoadCursor(IntPtr.Zero, IDC_HAND),
-                    hbrBackground = CreateSolidBrush(0x1E1E1E),
+                    hbrBackground = IntPtr.Zero, // no automatic background erase - we handle all painting
                     lpszMenuName = null!,
                     lpszClassName = windowClassName,
                     hIconSm = IntPtr.Zero
@@ -924,6 +928,51 @@ namespace TilingWindowManager
             return baseWidth;
         }
 
+        private RECT GetWorkspaceRect(IntPtr windowHandle, int workspaceId)
+        {
+            if (workspaceId < 1 || workspaceId > Monitor.NO_OF_WORKSPACES)
+                return new RECT();
+
+            RECT clientRect;
+            GetClientRect(windowHandle, out clientRect);
+
+            int index = workspaceId - 1;
+            int x = WORKSPACE_MARGIN + (index * (WORKSPACE_WIDTH + WORKSPACE_MARGIN));
+            int y = 5;
+
+            return new RECT
+            {
+                Left = x,
+                Top = y,
+                Right = x + WORKSPACE_WIDTH,
+                Bottom = clientRect.Bottom - 5
+            };
+        }
+
+        private RECT GetStackedAppRect(IntPtr windowHandle, int appIndex, int totalApps)
+        {
+            if (appIndex < 0 || appIndex >= totalApps)
+                return new RECT();
+
+            RECT clientRect;
+            GetClientRect(windowHandle, out clientRect);
+
+            int baseX = WORKSPACE_MARGIN + (Monitor.NO_OF_WORKSPACES * (WORKSPACE_WIDTH + WORKSPACE_MARGIN)) + STACKED_APP_MARGIN;
+            int y = 5;
+            int itemX = baseX + (appIndex * (STACKED_APP_ITEM_WIDTH + STACKED_APP_MARGIN));
+
+            int leftPadding = (appIndex > 0) ? STACKED_APP_MARGIN : 0;
+            int rightPadding = (appIndex < totalApps - 1) ? STACKED_APP_MARGIN : 0;
+
+            return new RECT
+            {
+                Left = itemX - leftPadding,
+                Top = y,
+                Right = itemX + STACKED_APP_ITEM_WIDTH + rightPadding,
+                Bottom = clientRect.Bottom - 5
+            };
+        }
+
         private (int monitorIndex, int workspaceId) GetWorkspaceAtPosition(IntPtr windowHandle, int x, int y)
         {
             foreach (var kvp in monitorIndicators)
@@ -1005,19 +1054,23 @@ namespace TilingWindowManager
 
             switch (msg)
             {
+                case WM_ERASEBKGND:
+                    // prevent automatic background erase to avoid flickering
+                    return new IntPtr(1);
+
                 case WM_PAINT:
                     HandlePaint(hWnd, currentMonitorIndex, currentIndicatorData);
                     break;
 
                 case WM_UPDATE_WORKSPACE:
-                    InvalidateRect(hWnd, IntPtr.Zero, true);
+                    InvalidateRect(hWnd, IntPtr.Zero, false);
                     break;
 
                 case WM_SETTINGCHANGE:
                     // reload configuration and redraw when system settings change
                     config.LoadConfiguration();
                     SetLayeredWindowAttributes(hWnd, GetTransparencyColorKey(), 0, LWA_COLORKEY);
-                    InvalidateRect(hWnd, IntPtr.Zero, true);
+                    InvalidateRect(hWnd, IntPtr.Zero, false);
                     return IntPtr.Zero;
 
                 case WM_ACTIVATE:
@@ -1041,23 +1094,72 @@ namespace TilingWindowManager
                     int x = (int)(lParam.ToInt64() & 0xFFFF);
                     int y = (int)((lParam.ToInt64() >> 16) & 0xFFFF);
 
-                    // check for stacked app hover first
                     var (_, newHoveredStackedApp) = GetStackedAppAtPosition(hWnd, x, y);
                     bool stackedAppHoverChanged = newHoveredStackedApp != currentIndicatorData.HoveredStackedAppIndex;
 
-                    // check for workspace hover
                     var (_, newHoveredWorkspace) = GetWorkspaceAtPosition(hWnd, x, y);
                     bool workspaceHoverChanged = newHoveredWorkspace != currentIndicatorData.HoveredWorkspace;
 
                     if (stackedAppHoverChanged)
                     {
+                        int stackedAppCount = 0;
+                        if (currentIndicatorData.StackedModeWorkspaces.Contains(currentIndicatorData.CurrentWorkspace))
+                        {
+                            if (currentIndicatorData.WorkspaceWindows.TryGetValue(currentIndicatorData.CurrentWorkspace, out var windows))
+                            {
+                                stackedAppCount = windows?.Count ?? 0;
+                            }
+                        }
+
+                        if (stackedAppCount > 0)
+                        {
+                            bool hasOld = currentIndicatorData.HoveredStackedAppIndex >= 0;
+                            bool hasNew = newHoveredStackedApp >= 0;
+
+                            if (hasOld && hasNew)
+                            {
+                                var oldRect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount);
+                                var newRect = GetStackedAppRect(hWnd, newHoveredStackedApp, stackedAppCount);
+
+                                var combinedRect = new RECT
+                                {
+                                    Left = Math.Min(oldRect.Left, newRect.Left),
+                                    Top = Math.Min(oldRect.Top, newRect.Top),
+                                    Right = Math.Max(oldRect.Right, newRect.Right),
+                                    Bottom = Math.Max(oldRect.Bottom, newRect.Bottom)
+                                };
+                                InvalidateRect(hWnd, ref combinedRect, false);
+                            }
+                            else if (hasOld)
+                            {
+                                var oldRect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount);
+                                InvalidateRect(hWnd, ref oldRect, false);
+                            }
+                            else if (hasNew)
+                            {
+                                var newRect = GetStackedAppRect(hWnd, newHoveredStackedApp, stackedAppCount);
+                                InvalidateRect(hWnd, ref newRect, false);
+                            }
+                        }
+
                         currentIndicatorData.HoveredStackedAppIndex = newHoveredStackedApp;
-                        InvalidateRect(hWnd, IntPtr.Zero, true);
                     }
-                    else if (workspaceHoverChanged)
+
+                    if (workspaceHoverChanged)
                     {
+                        if (currentIndicatorData.HoveredWorkspace > 0)
+                        {
+                            var oldRect = GetWorkspaceRect(hWnd, currentIndicatorData.HoveredWorkspace);
+                            InvalidateRect(hWnd, ref oldRect, false);
+                        }
+
+                        if (newHoveredWorkspace > 0)
+                        {
+                            var newRect = GetWorkspaceRect(hWnd, newHoveredWorkspace);
+                            InvalidateRect(hWnd, ref newRect, false);
+                        }
+
                         currentIndicatorData.HoveredWorkspace = newHoveredWorkspace;
-                        InvalidateRect(hWnd, IntPtr.Zero, true);
                     }
 
                     if (!currentIndicatorData.IsHovered)
@@ -1079,14 +1181,37 @@ namespace TilingWindowManager
                 case WM_MOUSELEAVE:
                     currentIndicatorData.IsHovered = false;
                     currentIndicatorData.IsPressed = false;
-                    currentIndicatorData.HoveredWorkspace = -1;
-                    currentIndicatorData.HoveredStackedAppIndex = -1;
-                    InvalidateRect(hWnd, IntPtr.Zero, true);
+
+                    if (currentIndicatorData.HoveredWorkspace > 0)
+                    {
+                        var rect = GetWorkspaceRect(hWnd, currentIndicatorData.HoveredWorkspace);
+                        InvalidateRect(hWnd, ref rect, false);
+                        currentIndicatorData.HoveredWorkspace = -1;
+                    }
+
+                    if (currentIndicatorData.HoveredStackedAppIndex >= 0)
+                    {
+                        int stackedAppCount = 0;
+                        if (currentIndicatorData.StackedModeWorkspaces.Contains(currentIndicatorData.CurrentWorkspace))
+                        {
+                            if (currentIndicatorData.WorkspaceWindows.TryGetValue(currentIndicatorData.CurrentWorkspace, out var windows))
+                            {
+                                stackedAppCount = windows?.Count ?? 0;
+                            }
+                        }
+
+                        if (stackedAppCount > 0)
+                        {
+                            var rect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount);
+                            InvalidateRect(hWnd, ref rect, false);
+                        }
+                        currentIndicatorData.HoveredStackedAppIndex = -1;
+                    }
                     break;
 
                 case WM_LBUTTONDOWN:
                     currentIndicatorData.IsPressed = true;
-                    InvalidateRect(hWnd, IntPtr.Zero, true);
+                    InvalidateRect(hWnd, IntPtr.Zero, false);
                     break;
 
                 case WM_LBUTTONUP:
@@ -1113,7 +1238,7 @@ namespace TilingWindowManager
                             }
                         }
 
-                        InvalidateRect(hWnd, IntPtr.Zero, true);
+                        InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
                     break;
 
@@ -1213,6 +1338,16 @@ namespace TilingWindowManager
             bool isBackupWorkspace = backupWorkspaces.Contains(workspaceId);
             bool isPaused = pausedWorkspaces.Contains(workspaceId);
 
+            bool isHovered = false;
+            foreach (var kvp in monitorIndicators)
+            {
+                if (kvp.Value.HoveredWorkspace == workspaceId)
+                {
+                    isHovered = true;
+                    break;
+                }
+            }
+
             // determine workspace background color
             uint workspaceBgColor;
             if (isPaused)
@@ -1225,6 +1360,8 @@ namespace TilingWindowManager
                 workspaceBgColor = STACKED_MODE_WORKSPACE_COLOR;
             else if (workspaceId == currentWS)
                 workspaceBgColor = ACTIVE_WORKSPACE_COLOR;
+            else if (isHovered)
+                workspaceBgColor = HOVERED_WORKSPACE_COLOR;
             else
                 workspaceBgColor = INACTIVE_WORKSPACE_COLOR;
 
@@ -1418,7 +1555,8 @@ namespace TilingWindowManager
                         Right = itemX + STACKED_APP_ITEM_WIDTH - 5,
                         Bottom = y + itemHeight
                     };
-                    DrawText(hdc, title, -1, ref textRect, 0x20 | 0x04); // DT_VCENTER | DT_SINGLELINE
+                    // DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS
+                    DrawText(hdc, title, -1, ref textRect, 0x20 | 0x04 | 0x800 | 0x8000);
                 }
             }
         }
