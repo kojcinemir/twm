@@ -283,6 +283,15 @@ namespace TilingWindowManager
             return currentStackedWindowIndex;
         }
 
+        public void SetCurrentStackedWindowIndex(int index)
+        {
+            var stackableWindows = GetStackableWindows();
+            if (isStackedMode && stackableWindows.Count > 0)
+            {
+                currentStackedWindowIndex = Math.Max(0, Math.Min(index, stackableWindows.Count - 1));
+            }
+        }
+
         public override string ToString()
         {
             return $"{Name} ({WindowCount} windows)";

@@ -648,6 +648,34 @@ namespace TilingWindowManager
             UpdateWorkspaceIndicator();
         }
 
+        public void SwitchToStackedWindow(int stackedWindowIndex, int monitorIndex)
+        {
+            var monitor = GetMonitorByIndex(monitorIndex);
+            if (monitor == null)
+            {
+                return;
+            }
+
+            var currentWorkspace = monitor.GetCurrentWorkspace();
+            if (currentWorkspace == null || !currentWorkspace.IsStackedMode)
+            {
+                return;
+            }
+
+            currentWorkspace.SetCurrentStackedWindowIndex(stackedWindowIndex);
+
+            ApplyTilingToCurrentWorkspace(monitor);
+
+            UpdateWorkspaceIndicator();
+
+            var stackableWindows = currentWorkspace.GetStackableWindows();
+            if (stackedWindowIndex >= 0 && stackedWindowIndex < stackableWindows.Count)
+            {
+                var windowToFocus = stackableWindows[stackedWindowIndex];
+                FocusWindow(windowToFocus);
+            }
+        }
+
         private void ResizeWindowForNewMonitor(nint window, Monitor sourceMonitor, Monitor targetMonitor)
         {
             try

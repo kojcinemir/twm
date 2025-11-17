@@ -224,7 +224,7 @@ namespace TilingWindowManager
             windowPositions.Remove(window);
         }
 
-        public static void InitializeWorkspaceIndicator(List<Monitor> monitors, Action<int, int> onWorkspaceClicked)
+        public static void InitializeWorkspaceIndicator(List<Monitor> monitors, Action<int, int> onWorkspaceClicked, Action<int, int> onStackedAppClicked)
         {
             if (sharedWorkspaceIndicator != null)
             {
@@ -234,6 +234,7 @@ namespace TilingWindowManager
 
             sharedWorkspaceIndicator = new WorkspaceIndicator();
             sharedWorkspaceIndicator.WorkspaceClicked += onWorkspaceClicked;
+            sharedWorkspaceIndicator.StackedAppClicked += onStackedAppClicked;
             sharedWorkspaceIndicator.Initialize(monitors);
         }
 

@@ -53,6 +53,19 @@ namespace TilingWindowManager
         public int Windows10OffsetFromTaskbarRightEdge { get; private set; } = 200;
         public bool UseWindows10Positioning { get; private set; } = false;
 
+        // Stacked app display configuration
+        public int StackedAppIconSize { get; private set; } = 24;
+        public int StackedAppItemWidth { get; private set; } = 150;
+        public int StackedAppItemWidthIconOnly { get; private set; } = 40;
+        public int StackedAppTitleMaxLength { get; private set; } = 15;
+        public bool ShowStackedAppTitle { get; private set; } = true;
+        public uint StackedAppBackgroundColor { get; private set; } = 0x2a2a2a;
+        public uint StackedAppHoverColor { get; private set; } = 0x3a3a3a;
+        public uint StackedAppActiveColor { get; private set; } = 0x4a4a7c;
+        public uint StackedAppTextColor { get; private set; } = 0xFFFFFF;
+        public uint StackedAppActiveTextColor { get; private set; } = 0xF4DB91;
+        public int StackedAppMargin { get; private set; } = 2;
+
         public bool LoadConfiguration()
         {
             try
@@ -97,6 +110,19 @@ namespace TilingWindowManager
 
                     Windows10OffsetFromTaskbarRightEdge = GetIntValue(indicatorTable, "windows10_offset_from_taskbar_right_edge", Windows10OffsetFromTaskbarRightEdge);
                     UseWindows10Positioning = GetBoolValue(indicatorTable, "use_windows10_positioning", UseWindows10Positioning);
+
+                    // Load stacked app display configuration
+                    StackedAppIconSize = GetIntValue(indicatorTable, "stacked_app_icon_size", StackedAppIconSize);
+                    StackedAppItemWidth = GetIntValue(indicatorTable, "stacked_app_item_width", StackedAppItemWidth);
+                    StackedAppItemWidthIconOnly = GetIntValue(indicatorTable, "stacked_app_item_width_icon_only", StackedAppItemWidthIconOnly);
+                    StackedAppTitleMaxLength = GetIntValue(indicatorTable, "stacked_app_title_max_length", StackedAppTitleMaxLength);
+                    ShowStackedAppTitle = GetBoolValue(indicatorTable, "show_stacked_app_title", ShowStackedAppTitle);
+                    StackedAppBackgroundColor = GetUintValue(indicatorTable, "stacked_app_background_color", StackedAppBackgroundColor);
+                    StackedAppHoverColor = GetUintValue(indicatorTable, "stacked_app_hover_color", StackedAppHoverColor);
+                    StackedAppActiveColor = GetUintValue(indicatorTable, "stacked_app_active_color", StackedAppActiveColor);
+                    StackedAppTextColor = GetUintValue(indicatorTable, "stacked_app_text_color", StackedAppTextColor);
+                    StackedAppActiveTextColor = GetUintValue(indicatorTable, "stacked_app_active_text_color", StackedAppActiveTextColor);
+                    StackedAppMargin = GetIntValue(indicatorTable, "stacked_app_margin", StackedAppMargin);
 
                     if (!UseWindows10Positioning)
                     {
