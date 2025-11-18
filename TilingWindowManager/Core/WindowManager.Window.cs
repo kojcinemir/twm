@@ -999,10 +999,6 @@ namespace TilingWindowManager
                     SetForegroundWindow(windows[i]);
                     BringWindowToTop(windows[i]);
                 }
-                else
-                {
-                    ShowWindow(windows[i], SW_HIDE);
-                }
             }
             UpdateWorkspaceIndicator();
         }

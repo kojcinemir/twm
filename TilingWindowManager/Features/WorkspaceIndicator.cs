@@ -1211,7 +1211,35 @@ namespace TilingWindowManager
 
                 case WM_LBUTTONDOWN:
                     currentIndicatorData.IsPressed = true;
-                    InvalidateRect(hWnd, IntPtr.Zero, false);
+
+                    // only invalidate the element being clicked, not the entire window
+                    GetCursorPos(out POINT downPos);
+                    ScreenToClient(hWnd, ref downPos);
+
+                    var (_, clickedStackedApp) = GetStackedAppAtPosition(hWnd, downPos.x, downPos.y);
+                    if (clickedStackedApp >= 0)
+                    {
+                        // clicking on stacked app
+                        int count = 0;
+                        if (currentIndicatorData.WorkspaceWindows.TryGetValue(currentIndicatorData.CurrentWorkspace, out var wins))
+                            count = wins?.Count ?? 0;
+
+                        if (count > 0)
+                        {
+                            var rect = GetStackedAppRect(hWnd, clickedStackedApp, count);
+                            InvalidateRect(hWnd, ref rect, false);
+                        }
+                    }
+                    else
+                    {
+                        // clicking on workspace
+                        var (_, clickedWS) = GetWorkspaceAtPosition(hWnd, downPos.x, downPos.y);
+                        if (clickedWS > 0)
+                        {
+                            var rect = GetWorkspaceRect(hWnd, clickedWS);
+                            InvalidateRect(hWnd, ref rect, false);
+                        }
+                    }
                     break;
 
                 case WM_LBUTTONUP:
@@ -1222,23 +1250,32 @@ namespace TilingWindowManager
                         GetCursorPos(out POINT cursorPos);
                         ScreenToClient(hWnd, ref cursorPos);
 
-                        // check for stacked app click first
                         var (stackedMonitorIndex, stackedAppIndex) = GetStackedAppAtPosition(hWnd, cursorPos.x, cursorPos.y);
                         if (stackedAppIndex >= 0)
                         {
                             ThreadPool.QueueUserWorkItem(_ => StackedAppClicked?.Invoke(stackedMonitorIndex, stackedAppIndex));
+
+                            int count = 0;
+                            if (currentIndicatorData.WorkspaceWindows.TryGetValue(currentIndicatorData.CurrentWorkspace, out var wins))
+                                count = wins?.Count ?? 0;
+
+                            if (count > 0)
+                            {
+                                var rect = GetStackedAppRect(hWnd, stackedAppIndex, count);
+                                InvalidateRect(hWnd, ref rect, false);
+                            }
                         }
                         else
                         {
-                            // check for workspace click
                             var (monitorIndex, clickedWorkspace) = GetWorkspaceAtPosition(hWnd, cursorPos.x, cursorPos.y);
                             if (clickedWorkspace > 0)
                             {
                                 ThreadPool.QueueUserWorkItem(_ => WorkspaceClicked?.Invoke(monitorIndex, clickedWorkspace));
+
+                                var rect = GetWorkspaceRect(hWnd, clickedWorkspace);
+                                InvalidateRect(hWnd, ref rect, false);
                             }
                         }
-
-                        InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
                     break;
 
