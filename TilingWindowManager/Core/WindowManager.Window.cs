@@ -999,6 +999,26 @@ namespace TilingWindowManager
                     SetForegroundWindow(windows[i]);
                     BringWindowToTop(windows[i]);
                 }
+                else
+                {
+                    var borderCfg = new WindowBorderConfiguration();
+                    borderCfg.LoadConfiguration();
+                    int bw = borderCfg.BorderWidth;
+
+                    int desiredLeft = monitor.WorkArea.Left + bw;
+                    int desiredTop = monitor.WorkArea.Top + bw;
+                    int desiredRight = monitor.WorkArea.Right - bw;
+                    int desiredBottom = monitor.WorkArea.Bottom - bw;
+
+                    var corrected = GetCorrectedWindowRectForStacked(windows[i], desiredLeft, desiredTop, desiredRight, desiredBottom);
+
+                    SetWindowPos(windows[i], nint.Zero,
+                        corrected.Left,
+                        corrected.Top,
+                        Math.Max(0, corrected.Right - corrected.Left),
+                        Math.Max(0, corrected.Bottom - corrected.Top),
+                        SWP_NOZORDER | SWP_NOACTIVATE);
+                }
             }
             UpdateWorkspaceIndicator();
         }
