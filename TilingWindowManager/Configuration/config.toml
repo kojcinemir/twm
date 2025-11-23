@@ -38,6 +38,8 @@ allowed_owned_windows = ["frontrunner"]
     workspace_margin = 2
     icon_size = 16
     show_only_occupied_workspaces = true    # Only show current workspace and workspaces with applications
+    workspace_rounded_corners = true       # Enable rounded corners for workspace boxes
+    workspace_corner_radius = 4             # Corner radius in pixels (only applies if rounded corners enabled)
 
     # Color settings - uncomment to override the color scheme
     # active_workspace_border_color = 0xFB923C
