@@ -250,7 +250,7 @@ namespace TilingWindowManager
         private const int WM_ERASEBKGND = 0x0014;
         private const int ICON_SMALL = 0;
         private const int ICON_BIG = 1;
-        private const int IDC_HAND = 32649;
+        private const int IDC_ARROW = 32512;
 
         private const uint DI_NORMAL = 0x0003;
         private const uint PROCESS_QUERY_INFORMATION = 0x0400;
@@ -515,7 +515,7 @@ namespace TilingWindowManager
                     cbWndExtra = 0,
                     hInstance = moduleHandle,
                     hIcon = IntPtr.Zero,
-                    hCursor = LoadCursor(IntPtr.Zero, IDC_HAND),
+                    hCursor = LoadCursor(IntPtr.Zero, IDC_ARROW),
                     hbrBackground = IntPtr.Zero, // no automatic background erase - we handle all painting
                     lpszMenuName = null!,
                     lpszClassName = windowClassName,
@@ -1139,7 +1139,7 @@ namespace TilingWindowManager
                     break;
 
                 case WM_SETCURSOR:
-                    SetCursor(LoadCursor(IntPtr.Zero, IDC_HAND));
+                    SetCursor(LoadCursor(IntPtr.Zero, IDC_ARROW));
                     return new IntPtr(1);
 
                 case WM_MOUSEMOVE:
@@ -1217,7 +1217,7 @@ namespace TilingWindowManager
                     if (!currentIndicatorData.IsHovered)
                     {
                         currentIndicatorData.IsHovered = true;
-                        SetCursor(LoadCursor(IntPtr.Zero, IDC_HAND));
+                        SetCursor(LoadCursor(IntPtr.Zero, IDC_ARROW));
 
                         var tme = new TRACKMOUSEEVENT
                         {
