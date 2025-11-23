@@ -82,6 +82,26 @@ namespace TilingWindowManager
                 string tomlContent = File.ReadAllText(configPath);
                 var model = Toml.ToModel(tomlContent);
 
+                // Check for color scheme first
+                string? colorSchemeName = null;
+                if (model.TryGetValue("color_scheme", out var schemeValue))
+                {
+                    colorSchemeName = schemeValue?.ToString();
+                    if (!string.IsNullOrWhiteSpace(colorSchemeName))
+                    {
+                        var scheme = ColorScheme.GetScheme(colorSchemeName);
+                        if (scheme != null)
+                        {
+                            Logger.Info($"Applying color scheme: {colorSchemeName}");
+                            ApplyColorScheme(scheme);
+                        }
+                        else
+                        {
+                            Logger.Warning($"Unknown color scheme: {colorSchemeName}. Available schemes: {string.Join(", ", ColorScheme.GetAvailableSchemes())}");
+                        }
+                    }
+                }
+
                 if (model.TryGetValue("workspace_indicator", out var indicatorObj) && indicatorObj is TomlTable indicatorTable)
                 {
                     WorkspaceWidth = GetIntValue(indicatorTable, "workspace_width", WorkspaceWidth);
@@ -89,21 +109,38 @@ namespace TilingWindowManager
                     WorkspaceMargin = GetIntValue(indicatorTable, "workspace_margin", WorkspaceMargin);
                     IconSize = GetIntValue(indicatorTable, "icon_size", IconSize);
 
-                    ActiveWorkspaceBorderColor = GetUintValue(indicatorTable, "active_workspace_border_color", ActiveWorkspaceBorderColor);
-                    BackgroundColor = GetUintValue(indicatorTable, "background_color", BackgroundColor);
-                    ActiveWorkspaceColor = GetUintValue(indicatorTable, "active_workspace_color", ActiveWorkspaceColor);
-                    HoveredWorkspaceColor = GetUintValue(indicatorTable, "hovered_workspace_color", HoveredWorkspaceColor);
-                    InactiveWorkspaceColor = GetUintValue(indicatorTable, "inactive_workspace_color", InactiveWorkspaceColor);
-                    ActiveWorkspaceTextColor = GetUintValue(indicatorTable, "active_workspace_text_color", ActiveWorkspaceTextColor);
-                    InactiveWorkspaceTextColor = GetUintValue(indicatorTable, "inactive_workspace_text_color", InactiveWorkspaceTextColor);
-                    StackedModeWorkspaceColor = GetUintValue(indicatorTable, "stacked_mode_workspace_color", StackedModeWorkspaceColor);
-                    StackedModeBorderColor = GetUintValue(indicatorTable, "stacked_mode_border_color", StackedModeBorderColor);
-                    BackupWorkspaceColor = GetUintValue(indicatorTable, "backup_workspace_color", BackupWorkspaceColor);
-                    BackupWorkspaceBorderColor = GetUintValue(indicatorTable, "backup_workspace_border_color", BackupWorkspaceBorderColor);
-                    BackupAndStackedWorkspaceColor = GetUintValue(indicatorTable, "backup_and_stacked_workspace_color", BackupAndStackedWorkspaceColor);
-                    BackupAndStackedBorderColor = GetUintValue(indicatorTable, "backup_and_stacked_border_color", BackupAndStackedBorderColor);
-                    PausedWorkspaceColor = GetUintValue(indicatorTable, "paused_workspace_color", PausedWorkspaceColor);
-                    PausedWorkspaceBorderColor = GetUintValue(indicatorTable, "paused_workspace_border_color", PausedWorkspaceBorderColor);
+                    // only override color scheme colors if explicitly set in config
+                    // this allows color scheme to be the base, with manual overrides
+                    if (indicatorTable.ContainsKey("active_workspace_border_color"))
+                        ActiveWorkspaceBorderColor = GetUintValue(indicatorTable, "active_workspace_border_color", ActiveWorkspaceBorderColor);
+                    if (indicatorTable.ContainsKey("background_color"))
+                        BackgroundColor = GetUintValue(indicatorTable, "background_color", BackgroundColor);
+                    if (indicatorTable.ContainsKey("active_workspace_color"))
+                        ActiveWorkspaceColor = GetUintValue(indicatorTable, "active_workspace_color", ActiveWorkspaceColor);
+                    if (indicatorTable.ContainsKey("hovered_workspace_color"))
+                        HoveredWorkspaceColor = GetUintValue(indicatorTable, "hovered_workspace_color", HoveredWorkspaceColor);
+                    if (indicatorTable.ContainsKey("inactive_workspace_color"))
+                        InactiveWorkspaceColor = GetUintValue(indicatorTable, "inactive_workspace_color", InactiveWorkspaceColor);
+                    if (indicatorTable.ContainsKey("active_workspace_text_color"))
+                        ActiveWorkspaceTextColor = GetUintValue(indicatorTable, "active_workspace_text_color", ActiveWorkspaceTextColor);
+                    if (indicatorTable.ContainsKey("inactive_workspace_text_color"))
+                        InactiveWorkspaceTextColor = GetUintValue(indicatorTable, "inactive_workspace_text_color", InactiveWorkspaceTextColor);
+                    if (indicatorTable.ContainsKey("stacked_mode_workspace_color"))
+                        StackedModeWorkspaceColor = GetUintValue(indicatorTable, "stacked_mode_workspace_color", StackedModeWorkspaceColor);
+                    if (indicatorTable.ContainsKey("stacked_mode_border_color"))
+                        StackedModeBorderColor = GetUintValue(indicatorTable, "stacked_mode_border_color", StackedModeBorderColor);
+                    if (indicatorTable.ContainsKey("backup_workspace_color"))
+                        BackupWorkspaceColor = GetUintValue(indicatorTable, "backup_workspace_color", BackupWorkspaceColor);
+                    if (indicatorTable.ContainsKey("backup_workspace_border_color"))
+                        BackupWorkspaceBorderColor = GetUintValue(indicatorTable, "backup_workspace_border_color", BackupWorkspaceBorderColor);
+                    if (indicatorTable.ContainsKey("backup_and_stacked_workspace_color"))
+                        BackupAndStackedWorkspaceColor = GetUintValue(indicatorTable, "backup_and_stacked_workspace_color", BackupAndStackedWorkspaceColor);
+                    if (indicatorTable.ContainsKey("backup_and_stacked_border_color"))
+                        BackupAndStackedBorderColor = GetUintValue(indicatorTable, "backup_and_stacked_border_color", BackupAndStackedBorderColor);
+                    if (indicatorTable.ContainsKey("paused_workspace_color"))
+                        PausedWorkspaceColor = GetUintValue(indicatorTable, "paused_workspace_color", PausedWorkspaceColor);
+                    if (indicatorTable.ContainsKey("paused_workspace_border_color"))
+                        PausedWorkspaceBorderColor = GetUintValue(indicatorTable, "paused_workspace_border_color", PausedWorkspaceBorderColor);
 
                     OffsetFromTaskbarLeftEdge = GetIntValue(indicatorTable, "offset_from_taskbar_left_edge", OffsetFromTaskbarLeftEdge);
                     ActiveWorkspaceBorderOpacity = GetByteValue(indicatorTable, "active_workspace_border_opacity", ActiveWorkspaceBorderOpacity);
@@ -117,11 +154,18 @@ namespace TilingWindowManager
                     StackedAppItemWidthIconOnly = GetIntValue(indicatorTable, "stacked_app_item_width_icon_only", StackedAppItemWidthIconOnly);
                     StackedAppTitleMaxLength = GetIntValue(indicatorTable, "stacked_app_title_max_length", StackedAppTitleMaxLength);
                     ShowStackedAppTitle = GetBoolValue(indicatorTable, "show_stacked_app_title", ShowStackedAppTitle);
-                    StackedAppBackgroundColor = GetUintValue(indicatorTable, "stacked_app_background_color", StackedAppBackgroundColor);
-                    StackedAppHoverColor = GetUintValue(indicatorTable, "stacked_app_hover_color", StackedAppHoverColor);
-                    StackedAppActiveColor = GetUintValue(indicatorTable, "stacked_app_active_color", StackedAppActiveColor);
-                    StackedAppTextColor = GetUintValue(indicatorTable, "stacked_app_text_color", StackedAppTextColor);
-                    StackedAppActiveTextColor = GetUintValue(indicatorTable, "stacked_app_active_text_color", StackedAppActiveTextColor);
+
+                    if (indicatorTable.ContainsKey("stacked_app_background_color"))
+                        StackedAppBackgroundColor = GetUintValue(indicatorTable, "stacked_app_background_color", StackedAppBackgroundColor);
+                    if (indicatorTable.ContainsKey("stacked_app_hover_color"))
+                        StackedAppHoverColor = GetUintValue(indicatorTable, "stacked_app_hover_color", StackedAppHoverColor);
+                    if (indicatorTable.ContainsKey("stacked_app_active_color"))
+                        StackedAppActiveColor = GetUintValue(indicatorTable, "stacked_app_active_color", StackedAppActiveColor);
+                    if (indicatorTable.ContainsKey("stacked_app_text_color"))
+                        StackedAppTextColor = GetUintValue(indicatorTable, "stacked_app_text_color", StackedAppTextColor);
+                    if (indicatorTable.ContainsKey("stacked_app_active_text_color"))
+                        StackedAppActiveTextColor = GetUintValue(indicatorTable, "stacked_app_active_text_color", StackedAppActiveTextColor);
+
                     StackedAppMargin = GetIntValue(indicatorTable, "stacked_app_margin", StackedAppMargin);
 
                     if (!UseWindows10Positioning)
@@ -143,6 +187,26 @@ namespace TilingWindowManager
                 ApplyWindowsVersionDefaults();
                 return false;
             }
+        }
+
+        private void ApplyColorScheme(ColorSchemeColors scheme)
+        {
+            ActiveWorkspaceBorderColor = scheme.ActiveWorkspaceBorderColor;
+            BackgroundColor = scheme.BackgroundColor;
+            ActiveWorkspaceColor = scheme.ActiveWorkspaceColor;
+            HoveredWorkspaceColor = scheme.HoveredWorkspaceColor;
+            InactiveWorkspaceColor = scheme.InactiveWorkspaceColor;
+            ActiveWorkspaceTextColor = scheme.ActiveWorkspaceTextColor;
+            InactiveWorkspaceTextColor = scheme.InactiveWorkspaceTextColor;
+            StackedModeWorkspaceColor = scheme.StackedModeWorkspaceColor;
+            StackedModeBorderColor = scheme.StackedModeBorderColor;
+            PausedWorkspaceColor = scheme.PausedWorkspaceColor;
+            PausedWorkspaceBorderColor = scheme.PausedWorkspaceBorderColor;
+            StackedAppBackgroundColor = scheme.StackedAppBackgroundColor;
+            StackedAppHoverColor = scheme.StackedAppHoverColor;
+            StackedAppActiveColor = scheme.StackedAppActiveColor;
+            StackedAppTextColor = scheme.StackedAppTextColor;
+            StackedAppActiveTextColor = scheme.StackedAppActiveTextColor;
         }
 
         private void ApplyWindowsVersionDefaults()
