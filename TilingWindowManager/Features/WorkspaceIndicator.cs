@@ -209,6 +209,12 @@ namespace TilingWindowManager
         [DllImport("gdi32.dll")]
         private static extern bool RoundRect(IntPtr hdc, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidth, int nHeight);
 
+        [DllImport("gdi32.dll")]
+        private static extern bool Ellipse(IntPtr hdc, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
+
+        [DllImport("gdi32.dll")]
+        private static extern IntPtr CreatePen(int fnPenStyle, int nWidth, uint crColor);
+
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
         // windows api
@@ -395,6 +401,11 @@ namespace TilingWindowManager
         private uint STACKED_APP_ACTIVE_COLOR => config.StackedAppActiveColor;
         private uint STACKED_APP_TEXT_COLOR => config.StackedAppTextColor;
         private uint STACKED_APP_ACTIVE_TEXT_COLOR => config.StackedAppActiveTextColor;
+        private bool SHOW_STACKED_APP_NUMBERS => config.ShowStackedAppNumbers;
+        private int STACKED_APP_NUMBER_BADGE_SIZE => config.StackedAppNumberBadgeSize;
+        private uint STACKED_APP_NUMBER_BADGE_BG_COLOR => config.StackedAppNumberBadgeBackgroundColor;
+        private uint STACKED_APP_NUMBER_BADGE_TEXT_COLOR => config.StackedAppNumberBadgeTextColor;
+        private List<string> STACKED_WINDOW_SHORTCUT_LABELS => config.StackedWindowShortcutLabels;
 
         private Dictionary<int, MonitorIndicatorData> monitorIndicators = new Dictionary<int, MonitorIndicatorData>();
         private Thread uiThread = null!;
@@ -1513,6 +1524,41 @@ namespace TilingWindowManager
             }
         }
 
+        private void DrawNumberBadge(IntPtr hdc, int x, int y, string label)
+        {
+            if (!SHOW_STACKED_APP_NUMBERS || string.IsNullOrWhiteSpace(label))
+                return;
+
+            int badgeSize = STACKED_APP_NUMBER_BADGE_SIZE;
+
+            // draw badge circle
+            IntPtr bgBrush = CreateSolidBrush(RgbToBgr(STACKED_APP_NUMBER_BADGE_BG_COLOR));
+            IntPtr bgPen = CreatePen(0, 1, RgbToBgr(STACKED_APP_NUMBER_BADGE_BG_COLOR));
+            IntPtr oldBrush = SelectObject(hdc, bgBrush);
+            IntPtr oldPen = SelectObject(hdc, bgPen);
+
+            Ellipse(hdc, x, y, x + badgeSize, y + badgeSize);
+
+            SelectObject(hdc, oldBrush);
+            SelectObject(hdc, oldPen);
+            DeleteObject(bgBrush);
+            DeleteObject(bgPen);
+
+            // draw label text
+            SetBkMode(hdc, 1); // transparent
+            SetTextColor(hdc, STACKED_APP_NUMBER_BADGE_TEXT_COLOR);
+
+            var textRect = new RECT
+            {
+                Left = x,
+                Top = y,
+                Right = x + badgeSize,
+                Bottom = y + badgeSize
+            };
+            // DT_CENTER | DT_VCENTER | DT_SINGLELINE
+            DrawText(hdc, label, -1, ref textRect, 0x01 | 0x04 | 0x20);
+        }
+
         private void DrawStackedApps(IntPtr hdc, List<WorkspaceWindow> windows, int currentStackedIndex, int hoveredStackedIndex, RECT clientRect)
         {
             int baseX = WORKSPACE_MARGIN + (Monitor.NO_OF_WORKSPACES * (WORKSPACE_WIDTH + WORKSPACE_MARGIN)) + STACKED_APP_MARGIN;
@@ -1571,6 +1617,14 @@ namespace TilingWindowManager
                     }
                     int iconY = y + (itemHeight - STACKED_APP_ICON_SIZE) / 2;
                     DrawIconEx(hdc, iconX, iconY, window.Icon, STACKED_APP_ICON_SIZE, STACKED_APP_ICON_SIZE, 0, IntPtr.Zero, 0x0003);
+
+                    // draw shortcut label badge on top-right corner of icon
+                    if (i < STACKED_WINDOW_SHORTCUT_LABELS.Count)
+                    {
+                        int badgeX = iconX + STACKED_APP_ICON_SIZE - STACKED_APP_NUMBER_BADGE_SIZE;
+                        int badgeY = iconY - 2; // slight offset upward
+                        DrawNumberBadge(hdc, badgeX, badgeY, STACKED_WINDOW_SHORTCUT_LABELS[i]);
+                    }
                 }
 
                 // draw title (only if enabled)
