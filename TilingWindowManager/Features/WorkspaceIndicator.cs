@@ -1369,14 +1369,19 @@ namespace TilingWindowManager
 
                 RECT rect;
                 GetClientRect(hWnd, out rect);
+                RECT paintRect = ps.rcPaint;
 
-                // fill background with transparency key color
+                // create off-screen buffer for double buffering to eliminate flickering
+                IntPtr memDC = CreateCompatibleDC(hdc);
+                IntPtr memBitmap = CreateCompatibleBitmap(hdc, rect.Right - rect.Left, rect.Bottom - rect.Top);
+                IntPtr oldBitmap = SelectObject(memDC, memBitmap);
+
                 uint transparencyKey = GetTransparencyColorKey();
                 IntPtr bgBrush = CreateSolidBrush(transparencyKey);
-                FillRect(hdc, ref rect, bgBrush);
+                FillRect(memDC, ref rect, bgBrush);
                 DeleteObject(bgBrush);
 
-                SetBkMode(hdc, 1); // transparent
+                SetBkMode(memDC, 1); // transparent
 
                 // get stacked mode, backup workspaces, and paused workspaces
                 HashSet<int> stackedModeWorkspaces;
@@ -1389,12 +1394,12 @@ namespace TilingWindowManager
                     pausedWorkspaces = new HashSet<int>(indicatorData.PausedWorkspaces);
                 }
 
-                // draw all visible workspaces for this monitor
+                // draw all visible workspaces to off-screen buffer
                 var visibleWorkspaces = GetVisibleWorkspaces(currentWS, currentWorkspaceWindows);
                 for (int i = 0; i < visibleWorkspaces.Count; i++)
                 {
                     int workspaceId = visibleWorkspaces[i];
-                    DrawWorkspaceWithIcons(hdc, workspaceId, i, currentWS, currentWorkspaceWindows, stackedModeWorkspaces, backupWorkspaces, pausedWorkspaces, rect);
+                    DrawWorkspaceWithIcons(memDC, workspaceId, i, currentWS, currentWorkspaceWindows, stackedModeWorkspaces, backupWorkspaces, pausedWorkspaces, rect);
                 }
 
                 // draw stacked apps if current workspace is in stacked mode
@@ -1409,9 +1414,26 @@ namespace TilingWindowManager
                             currentStackedIndex = indicatorData.CurrentStackedWindowIndex;
                             hoveredStackedIndex = indicatorData.HoveredStackedAppIndex;
                         }
-                        DrawStackedApps(hdc, stackedWindows, currentStackedIndex, hoveredStackedIndex, rect, indicatorData);
+                        DrawStackedApps(memDC, stackedWindows, currentStackedIndex, hoveredStackedIndex, rect, indicatorData);
                     }
                 }
+
+                // copy off-screren buffer in one operation to eliminate flickering
+                BLENDFUNCTION blendFunc = new BLENDFUNCTION
+                {
+                    BlendOp = AC_SRC_OVER,
+                    BlendFlags = 0,
+                    SourceConstantAlpha = 255,
+                    AlphaFormat = 0
+                };
+
+                AlphaBlend(hdc, 0, 0, rect.Right - rect.Left, rect.Bottom - rect.Top,
+                          memDC, 0, 0, rect.Right - rect.Left, rect.Bottom - rect.Top, blendFunc);
+
+                // clean up double buffering resources
+                SelectObject(memDC, oldBitmap);
+                DeleteObject(memBitmap);
+                DeleteDC(memDC);
             }
             finally
             {
@@ -1564,6 +1586,12 @@ namespace TilingWindowManager
                 };
                 DrawText(hdc, moreText, -1, ref moreRect, 0x01); // DT_CENTER
             }
+        }
+
+        private bool RectIntersects(RECT rect1, RECT rect2)
+        {
+            return !(rect1.Right <= rect2.Left || rect1.Left >= rect2.Right ||
+                     rect1.Bottom <= rect2.Top || rect1.Top >= rect2.Bottom);
         }
 
         private void DrawNumberBadge(IntPtr hdc, int x, int y, string label)
