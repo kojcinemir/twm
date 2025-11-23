@@ -37,6 +37,7 @@ allowed_owned_windows = ["frontrunner"]
     workspace_height = 40
     workspace_margin = 2
     icon_size = 16
+    show_only_occupied_workspaces = true    # Only show current workspace and workspaces with applications
 
     # Color settings - uncomment to override the color scheme
     # active_workspace_border_color = 0xFB923C

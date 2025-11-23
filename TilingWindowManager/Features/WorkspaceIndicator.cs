@@ -372,6 +372,7 @@ namespace TilingWindowManager
         private int WORKSPACE_HEIGHT => config.WorkspaceHeight;
         private int WORKSPACE_MARGIN => config.WorkspaceMargin;
         private int ICON_SIZE => config.IconSize;
+        private bool SHOW_ONLY_OCCUPIED_WORKSPACES => config.ShowOnlyOccupiedWorkspaces;
         private int STACKED_APP_ICON_SIZE => config.StackedAppIconSize;
         private int STACKED_APP_ITEM_WIDTH => config.ShowStackedAppTitle ? config.StackedAppItemWidth : config.StackedAppItemWidthIconOnly;
         private int STACKED_APP_TITLE_MAX_LENGTH => config.StackedAppTitleMaxLength;
@@ -922,9 +923,39 @@ namespace TilingWindowManager
             return icon;
         }
 
+        private bool ShouldShowWorkspace(int workspaceId, int currentWorkspace, Dictionary<int, List<WorkspaceWindow>> workspaceWindows)
+        {
+            if (!SHOW_ONLY_OCCUPIED_WORKSPACES)
+                return true;
+
+            // Always show current workspace
+            if (workspaceId == currentWorkspace)
+                return true;
+
+            // Show if workspace has windows
+            if (workspaceWindows.TryGetValue(workspaceId, out var windows) && windows != null && windows.Count > 0)
+                return true;
+
+            return false;
+        }
+
+        private List<int> GetVisibleWorkspaces(int currentWorkspace, Dictionary<int, List<WorkspaceWindow>> workspaceWindows)
+        {
+            var visibleWorkspaces = new List<int>();
+            for (int i = 1; i <= Monitor.NO_OF_WORKSPACES; i++)
+            {
+                if (ShouldShowWorkspace(i, currentWorkspace, workspaceWindows))
+                {
+                    visibleWorkspaces.Add(i);
+                }
+            }
+            return visibleWorkspaces;
+        }
+
         private int CalculateIndicatorWidth(MonitorIndicatorData indicatorData)
         {
-            int baseWidth = (WORKSPACE_WIDTH + WORKSPACE_MARGIN) * Monitor.NO_OF_WORKSPACES + WORKSPACE_MARGIN;
+            var visibleWorkspaces = GetVisibleWorkspaces(indicatorData.CurrentWorkspace, indicatorData.WorkspaceWindows);
+            int baseWidth = (WORKSPACE_WIDTH + WORKSPACE_MARGIN) * visibleWorkspaces.Count + WORKSPACE_MARGIN;
 
             // check if current workspace is in stacked mode and has windows
             if (indicatorData.StackedModeWorkspaces.Contains(indicatorData.CurrentWorkspace))
@@ -939,7 +970,7 @@ namespace TilingWindowManager
             return baseWidth;
         }
 
-        private RECT GetWorkspaceRect(IntPtr windowHandle, int workspaceId)
+        private RECT GetWorkspaceRect(IntPtr windowHandle, int workspaceId, MonitorIndicatorData indicatorData)
         {
             if (workspaceId < 1 || workspaceId > Monitor.NO_OF_WORKSPACES)
                 return new RECT();
@@ -947,8 +978,13 @@ namespace TilingWindowManager
             RECT clientRect;
             GetClientRect(windowHandle, out clientRect);
 
-            int index = workspaceId - 1;
-            int x = WORKSPACE_MARGIN + (index * (WORKSPACE_WIDTH + WORKSPACE_MARGIN));
+            var visibleWorkspaces = GetVisibleWorkspaces(indicatorData.CurrentWorkspace, indicatorData.WorkspaceWindows);
+            int visibleIndex = visibleWorkspaces.IndexOf(workspaceId);
+
+            if (visibleIndex < 0)
+                return new RECT(); // Workspace is not visible
+
+            int x = WORKSPACE_MARGIN + (visibleIndex * (WORKSPACE_WIDTH + WORKSPACE_MARGIN));
             int y = 5;
 
             return new RECT
@@ -960,7 +996,7 @@ namespace TilingWindowManager
             };
         }
 
-        private RECT GetStackedAppRect(IntPtr windowHandle, int appIndex, int totalApps)
+        private RECT GetStackedAppRect(IntPtr windowHandle, int appIndex, int totalApps, MonitorIndicatorData indicatorData)
         {
             if (appIndex < 0 || appIndex >= totalApps)
                 return new RECT();
@@ -968,7 +1004,8 @@ namespace TilingWindowManager
             RECT clientRect;
             GetClientRect(windowHandle, out clientRect);
 
-            int baseX = WORKSPACE_MARGIN + (Monitor.NO_OF_WORKSPACES * (WORKSPACE_WIDTH + WORKSPACE_MARGIN)) + STACKED_APP_MARGIN;
+            var visibleWorkspaces = GetVisibleWorkspaces(indicatorData.CurrentWorkspace, indicatorData.WorkspaceWindows);
+            int baseX = WORKSPACE_MARGIN + (visibleWorkspaces.Count * (WORKSPACE_WIDTH + WORKSPACE_MARGIN)) + STACKED_APP_MARGIN;
             int y = 5;
             int itemX = baseX + (appIndex * (STACKED_APP_ITEM_WIDTH + STACKED_APP_MARGIN));
 
@@ -991,8 +1028,11 @@ namespace TilingWindowManager
                 if (kvp.Value.WindowHandle == windowHandle)
                 {
                     int monitorIndex = kvp.Key;
+                    var indicatorData = kvp.Value;
 
-                    for (int i = 0; i < Monitor.NO_OF_WORKSPACES; i++)
+                    var visibleWorkspaces = GetVisibleWorkspaces(indicatorData.CurrentWorkspace, indicatorData.WorkspaceWindows);
+
+                    for (int i = 0; i < visibleWorkspaces.Count; i++)
                     {
                         int workspaceX = WORKSPACE_MARGIN + (i * (WORKSPACE_WIDTH + WORKSPACE_MARGIN));
                         int workspaceY = 5;
@@ -1000,7 +1040,7 @@ namespace TilingWindowManager
                         if (x >= workspaceX && x < workspaceX + WORKSPACE_WIDTH &&
                             y >= workspaceY)
                         {
-                            return (monitorIndex, i + 1);
+                            return (monitorIndex, visibleWorkspaces[i]);
                         }
                     }
                     break;
@@ -1026,7 +1066,8 @@ namespace TilingWindowManager
                     if (!indicatorData.WorkspaceWindows.TryGetValue(indicatorData.CurrentWorkspace, out var windows) || windows == null || windows.Count == 0)
                         return (-1, -1);
 
-                    int baseX = WORKSPACE_MARGIN + (Monitor.NO_OF_WORKSPACES * (WORKSPACE_WIDTH + WORKSPACE_MARGIN)) + STACKED_APP_MARGIN;
+                    var visibleWorkspaces = GetVisibleWorkspaces(indicatorData.CurrentWorkspace, indicatorData.WorkspaceWindows);
+                    int baseX = WORKSPACE_MARGIN + (visibleWorkspaces.Count * (WORKSPACE_WIDTH + WORKSPACE_MARGIN)) + STACKED_APP_MARGIN;
                     int itemY = 5;
 
                     for (int i = 0; i < windows.Count; i++)
@@ -1129,8 +1170,8 @@ namespace TilingWindowManager
 
                             if (hasOld && hasNew)
                             {
-                                var oldRect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount);
-                                var newRect = GetStackedAppRect(hWnd, newHoveredStackedApp, stackedAppCount);
+                                var oldRect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount, currentIndicatorData);
+                                var newRect = GetStackedAppRect(hWnd, newHoveredStackedApp, stackedAppCount, currentIndicatorData);
 
                                 var combinedRect = new RECT
                                 {
@@ -1143,12 +1184,12 @@ namespace TilingWindowManager
                             }
                             else if (hasOld)
                             {
-                                var oldRect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount);
+                                var oldRect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount, currentIndicatorData);
                                 InvalidateRect(hWnd, ref oldRect, false);
                             }
                             else if (hasNew)
                             {
-                                var newRect = GetStackedAppRect(hWnd, newHoveredStackedApp, stackedAppCount);
+                                var newRect = GetStackedAppRect(hWnd, newHoveredStackedApp, stackedAppCount, currentIndicatorData);
                                 InvalidateRect(hWnd, ref newRect, false);
                             }
                         }
@@ -1160,13 +1201,13 @@ namespace TilingWindowManager
                     {
                         if (currentIndicatorData.HoveredWorkspace > 0)
                         {
-                            var oldRect = GetWorkspaceRect(hWnd, currentIndicatorData.HoveredWorkspace);
+                            var oldRect = GetWorkspaceRect(hWnd, currentIndicatorData.HoveredWorkspace, currentIndicatorData);
                             InvalidateRect(hWnd, ref oldRect, false);
                         }
 
                         if (newHoveredWorkspace > 0)
                         {
-                            var newRect = GetWorkspaceRect(hWnd, newHoveredWorkspace);
+                            var newRect = GetWorkspaceRect(hWnd, newHoveredWorkspace, currentIndicatorData);
                             InvalidateRect(hWnd, ref newRect, false);
                         }
 
@@ -1195,7 +1236,7 @@ namespace TilingWindowManager
 
                     if (currentIndicatorData.HoveredWorkspace > 0)
                     {
-                        var rect = GetWorkspaceRect(hWnd, currentIndicatorData.HoveredWorkspace);
+                        var rect = GetWorkspaceRect(hWnd, currentIndicatorData.HoveredWorkspace, currentIndicatorData);
                         InvalidateRect(hWnd, ref rect, false);
                         currentIndicatorData.HoveredWorkspace = -1;
                     }
@@ -1213,7 +1254,7 @@ namespace TilingWindowManager
 
                         if (stackedAppCount > 0)
                         {
-                            var rect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount);
+                            var rect = GetStackedAppRect(hWnd, currentIndicatorData.HoveredStackedAppIndex, stackedAppCount, currentIndicatorData);
                             InvalidateRect(hWnd, ref rect, false);
                         }
                         currentIndicatorData.HoveredStackedAppIndex = -1;
@@ -1237,7 +1278,7 @@ namespace TilingWindowManager
 
                         if (count > 0)
                         {
-                            var rect = GetStackedAppRect(hWnd, clickedStackedApp, count);
+                            var rect = GetStackedAppRect(hWnd, clickedStackedApp, count, currentIndicatorData);
                             InvalidateRect(hWnd, ref rect, false);
                         }
                     }
@@ -1247,7 +1288,7 @@ namespace TilingWindowManager
                         var (_, clickedWS) = GetWorkspaceAtPosition(hWnd, downPos.x, downPos.y);
                         if (clickedWS > 0)
                         {
-                            var rect = GetWorkspaceRect(hWnd, clickedWS);
+                            var rect = GetWorkspaceRect(hWnd, clickedWS, currentIndicatorData);
                             InvalidateRect(hWnd, ref rect, false);
                         }
                     }
@@ -1272,7 +1313,7 @@ namespace TilingWindowManager
 
                             if (count > 0)
                             {
-                                var rect = GetStackedAppRect(hWnd, stackedAppIndex, count);
+                                var rect = GetStackedAppRect(hWnd, stackedAppIndex, count, currentIndicatorData);
                                 InvalidateRect(hWnd, ref rect, false);
                             }
                         }
@@ -1283,7 +1324,7 @@ namespace TilingWindowManager
                             {
                                 ThreadPool.QueueUserWorkItem(_ => WorkspaceClicked?.Invoke(monitorIndex, clickedWorkspace));
 
-                                var rect = GetWorkspaceRect(hWnd, clickedWorkspace);
+                                var rect = GetWorkspaceRect(hWnd, clickedWorkspace, currentIndicatorData);
                                 InvalidateRect(hWnd, ref rect, false);
                             }
                         }
@@ -1348,10 +1389,12 @@ namespace TilingWindowManager
                     pausedWorkspaces = new HashSet<int>(indicatorData.PausedWorkspaces);
                 }
 
-                // draw all workspaces for this monitor
-                for (int i = 1; i <= Monitor.NO_OF_WORKSPACES; i++)
+                // draw all visible workspaces for this monitor
+                var visibleWorkspaces = GetVisibleWorkspaces(currentWS, currentWorkspaceWindows);
+                for (int i = 0; i < visibleWorkspaces.Count; i++)
                 {
-                    DrawWorkspaceWithIcons(hdc, i, currentWS, currentWorkspaceWindows, stackedModeWorkspaces, backupWorkspaces, pausedWorkspaces, rect);
+                    int workspaceId = visibleWorkspaces[i];
+                    DrawWorkspaceWithIcons(hdc, workspaceId, i, currentWS, currentWorkspaceWindows, stackedModeWorkspaces, backupWorkspaces, pausedWorkspaces, rect);
                 }
 
                 // draw stacked apps if current workspace is in stacked mode
@@ -1366,7 +1409,7 @@ namespace TilingWindowManager
                             currentStackedIndex = indicatorData.CurrentStackedWindowIndex;
                             hoveredStackedIndex = indicatorData.HoveredStackedAppIndex;
                         }
-                        DrawStackedApps(hdc, stackedWindows, currentStackedIndex, hoveredStackedIndex, rect);
+                        DrawStackedApps(hdc, stackedWindows, currentStackedIndex, hoveredStackedIndex, rect, indicatorData);
                     }
                 }
             }
@@ -1376,10 +1419,9 @@ namespace TilingWindowManager
             }
         }
 
-        private void DrawWorkspaceWithIcons(IntPtr hdc, int workspaceId, int currentWS, Dictionary<int, List<WorkspaceWindow>> allWorkspaces, HashSet<int> stackedModeWorkspaces, HashSet<int> backupWorkspaces, HashSet<int> pausedWorkspaces, RECT clientRect)
+        private void DrawWorkspaceWithIcons(IntPtr hdc, int workspaceId, int visualIndex, int currentWS, Dictionary<int, List<WorkspaceWindow>> allWorkspaces, HashSet<int> stackedModeWorkspaces, HashSet<int> backupWorkspaces, HashSet<int> pausedWorkspaces, RECT clientRect)
         {
-            int index = workspaceId - 1;
-            int x = WORKSPACE_MARGIN + (index * (WORKSPACE_WIDTH + WORKSPACE_MARGIN));
+            int x = WORKSPACE_MARGIN + (visualIndex * (WORKSPACE_WIDTH + WORKSPACE_MARGIN));
             int y = 5;
 
             bool isStackedMode = stackedModeWorkspaces.Contains(workspaceId);
@@ -1559,9 +1601,10 @@ namespace TilingWindowManager
             DrawText(hdc, label, -1, ref textRect, 0x01 | 0x04 | 0x20);
         }
 
-        private void DrawStackedApps(IntPtr hdc, List<WorkspaceWindow> windows, int currentStackedIndex, int hoveredStackedIndex, RECT clientRect)
+        private void DrawStackedApps(IntPtr hdc, List<WorkspaceWindow> windows, int currentStackedIndex, int hoveredStackedIndex, RECT clientRect, MonitorIndicatorData indicatorData)
         {
-            int baseX = WORKSPACE_MARGIN + (Monitor.NO_OF_WORKSPACES * (WORKSPACE_WIDTH + WORKSPACE_MARGIN)) + STACKED_APP_MARGIN;
+            var visibleWorkspaces = GetVisibleWorkspaces(indicatorData.CurrentWorkspace, indicatorData.WorkspaceWindows);
+            int baseX = WORKSPACE_MARGIN + (visibleWorkspaces.Count * (WORKSPACE_WIDTH + WORKSPACE_MARGIN)) + STACKED_APP_MARGIN;
             int y = 5;
             int itemHeight = clientRect.Bottom - 10;
 
