@@ -66,6 +66,13 @@ namespace TilingWindowManager
         public uint StackedAppActiveTextColor { get; private set; } = 0xF4DB91;
         public int StackedAppMargin { get; private set; } = 2;
 
+        // Stacked app number badge configuration
+        public bool ShowStackedAppNumbers { get; private set; } = true;
+        public int StackedAppNumberBadgeSize { get; private set; } = 14;
+        public uint StackedAppNumberBadgeBackgroundColor { get; private set; } = 0x4a4a7c;
+        public uint StackedAppNumberBadgeTextColor { get; private set; } = 0xFFFFFF;
+        public List<string> StackedWindowShortcutLabels { get; private set; } = new List<string> { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+
         public bool LoadConfiguration()
         {
             try
@@ -168,18 +175,56 @@ namespace TilingWindowManager
 
                     StackedAppMargin = GetIntValue(indicatorTable, "stacked_app_margin", StackedAppMargin);
 
+                    // Load stacked app number badge configuration
+                    ShowStackedAppNumbers = GetBoolValue(indicatorTable, "show_stacked_app_numbers", ShowStackedAppNumbers);
+                    StackedAppNumberBadgeSize = GetIntValue(indicatorTable, "stacked_app_number_badge_size", StackedAppNumberBadgeSize);
+                    if (indicatorTable.ContainsKey("stacked_app_number_badge_background_color"))
+                        StackedAppNumberBadgeBackgroundColor = GetUintValue(indicatorTable, "stacked_app_number_badge_background_color", StackedAppNumberBadgeBackgroundColor);
+                    if (indicatorTable.ContainsKey("stacked_app_number_badge_text_color"))
+                        StackedAppNumberBadgeTextColor = GetUintValue(indicatorTable, "stacked_app_number_badge_text_color", StackedAppNumberBadgeTextColor);
+
                     if (!UseWindows10Positioning)
                     {
                         ApplyWindowsVersionDefaults();
                     }
-
-                    return true;
                 }
                 else
                 { // fallback to use default values
                     ApplyWindowsVersionDefaults();
-                    return false;
                 }
+
+                // Load stacked window shortcut labels from hotkeys section
+                if (model.TryGetValue("hotkeys", out var hotkeysObj) && hotkeysObj is TomlTable hotkeysTable)
+                {
+                    var labels = new List<string>();
+                    for (int i = 1; i <= 9; i++)
+                    {
+                        string hotkeyName = $"jump_to_stacked_window_{i}";
+                        if (hotkeysTable.TryGetValue(hotkeyName, out var hotkeyObj) && hotkeyObj is TomlTable hotkeyTable)
+                        {
+                            if (hotkeyTable.TryGetValue("key", out var keyValue) && keyValue != null)
+                            {
+                                string keyString = keyValue.ToString() ?? "";
+                                string label = ExtractLabelFromKey(keyString);
+                                labels.Add(label);
+                            }
+                            else
+                            {
+                                labels.Add(i.ToString());
+                            }
+                        }
+                        else
+                        {
+                            labels.Add(i.ToString());
+                        }
+                    }
+                    if (labels.Count > 0)
+                    {
+                        StackedWindowShortcutLabels = labels;
+                    }
+                }
+
+                return true;
             }
             catch (Exception ex)
             {
@@ -273,6 +318,21 @@ namespace TilingWindowManager
                     return parsedValue;
             }
             return defaultValue;
+        }
+
+        private string ExtractLabelFromKey(string keyString)
+        {
+            if (string.IsNullOrWhiteSpace(keyString))
+                return "";
+
+            // Extract the last part after the last "+"
+            int lastPlusIndex = keyString.LastIndexOf('+');
+            if (lastPlusIndex >= 0 && lastPlusIndex < keyString.Length - 1)
+            {
+                return keyString.Substring(lastPlusIndex + 1).Trim().ToUpper();
+            }
+
+            return keyString.Trim().ToUpper();
         }
     }
 }
