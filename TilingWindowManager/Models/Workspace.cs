@@ -74,7 +74,7 @@ namespace TilingWindowManager
         public void AddWindow(nint window)
         {
             windows.AddWindow(window);
-            if (!isPaused)
+            if (!isPaused && !isStackedMode)
             {
                 bspTiling?.AddWindow(window);
             }
@@ -83,7 +83,7 @@ namespace TilingWindowManager
         public bool RemoveWindow(nint window)
         {
             bool removed = windows.RemoveWindow(window);
-            if (removed && !isPaused)
+            if (removed && !isPaused && !isStackedMode)
             {
                 bspTiling?.RemoveWindow(window);
             }
@@ -202,6 +202,11 @@ namespace TilingWindowManager
         {
             isStackedMode = false;
             currentStackedWindowIndex = 0;
+            // rebuild BSP tree when exiting stacked mode
+            if (!isPaused)
+            {
+                bspTiling?.TileWindows();
+            }
         }
 
         public void FocusNewestWindowInStack()
