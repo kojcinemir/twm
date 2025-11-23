@@ -82,6 +82,37 @@ namespace TilingWindowManager
 
         public bool RemoveWindow(nint window)
         {
+            if (isStackedMode)
+            {
+                var stackableWindows = GetStackableWindows();
+                int removedIndex = stackableWindows.IndexOf(window);
+
+                if (removedIndex >= 0)
+                {
+                    if (removedIndex == currentStackedWindowIndex)
+                    {
+                        if (currentStackedWindowIndex > 0)
+                        {
+                            currentStackedWindowIndex--;
+                        }
+                    }
+                    else if (removedIndex < currentStackedWindowIndex)
+                    {
+                        currentStackedWindowIndex--;
+                    }
+
+                    int newCount = stackableWindows.Count - 1;
+                    if (newCount > 0)
+                    {
+                        currentStackedWindowIndex = Math.Max(0, Math.Min(currentStackedWindowIndex, newCount - 1));
+                    }
+                    else
+                    {
+                        currentStackedWindowIndex = 0;
+                    }
+                }
+            }
+
             bool removed = windows.RemoveWindow(window);
             if (removed && !isPaused && !isStackedMode)
             {
@@ -258,7 +289,6 @@ namespace TilingWindowManager
             if (!isStackedMode || stackableWindows.Count == 0)
                 return;
 
-
             currentStackedWindowIndex = (currentStackedWindowIndex + 1) % stackableWindows.Count;
 
         }
@@ -268,7 +298,6 @@ namespace TilingWindowManager
             var stackableWindows = GetStackableWindows();
             if (!isStackedMode || stackableWindows.Count == 0)
                 return;
-
 
             if (direction > 0)
             {
