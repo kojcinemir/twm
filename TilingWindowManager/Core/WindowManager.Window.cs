@@ -79,6 +79,8 @@ namespace TilingWindowManager
                 return;
             }
 
+            windowBorder.HideAllBorders();
+
             nint targetWindow = targetWorkspace.GetWindowInDirection(currentWindow, direction);
 
             if (targetWindow != nint.Zero && targetWindow != currentWindow)

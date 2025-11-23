@@ -28,6 +28,7 @@ allowed_owned_windows = ["frontrunner"]
 
 # Logging Settings
 [logging]
+    enabled = false  # Set to false to disable logging in normal mode (saves resources)
     level = "debug"   # options: debug, info, warning, error
 
 # Workspace Indicator Visual Settings
@@ -130,7 +131,6 @@ allowed_owned_windows = ["frontrunner"]
 
 # Will refresh (retile) the workspace if there is some and issue with tiling
     [hotkeys.refresh_monitor]
-        key = "ALT+R"
         key = "ALT+SHIFT+R"
         action = "refresh_active_monitor"
 
