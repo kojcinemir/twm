@@ -88,9 +88,9 @@ allowed_owned_windows = ["frontrunner"]
 
 # Application Hotkeys - Hotkeys to switch to workspace containing specific applications
 [application_hotkeys]
-    "ALT+Q" = "slack.exe"
-    "ALT+W" = "TcXaeShell.exe"
-    "ALT+E" = "devenv.exe"
+    "ALT+SHIFT+Q" = "slack.exe"
+    "ALT+SHIFT+W" = "TcXaeShell.exe"
+    "ALT+SHIFT+E" = "devenv.exe"
     "ALT+SHIFT+A" = "Arc.exe"
 
 # HotKey Key-Action Mappings
@@ -144,6 +144,43 @@ allowed_owned_windows = ["frontrunner"]
     [hotkeys.cycle_stacked_window]
         key = "ALT+S"
         action = "cycle_stacked_window"
+
+# Jump to specific stacked window by position 
+    [hotkeys.jump_to_stacked_window_1]
+        key = "ALT+Q"
+        action = "jump_to_stacked_window"
+
+    [hotkeys.jump_to_stacked_window_2]
+        key = "ALT+W"
+        action = "jump_to_stacked_window"
+
+    [hotkeys.jump_to_stacked_window_3]
+        key = "ALT+E"
+        action = "jump_to_stacked_window"
+
+    [hotkeys.jump_to_stacked_window_4]
+        key = "ALT+R"
+        action = "jump_to_stacked_window"
+
+    [hotkeys.jump_to_stacked_window_5]
+        key = "WIN+5"
+        action = "jump_to_stacked_window"
+
+    [hotkeys.jump_to_stacked_window_6]
+        key = "WIN+6"
+        action = "jump_to_stacked_window"
+
+    [hotkeys.jump_to_stacked_window_7]
+        key = "WIN+7"
+        action = "jump_to_stacked_window"
+
+    [hotkeys.jump_to_stacked_window_8]
+        key = "WIN+8"
+        action = "jump_to_stacked_window"
+
+    [hotkeys.jump_to_stacked_window_9]
+        key = "WIN+9"
+        action = "jump_to_stacked_window"
 
 # Toggle paused mode
     [hotkeys.toggle_paused_mode]

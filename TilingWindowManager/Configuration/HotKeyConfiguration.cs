@@ -364,6 +364,43 @@ allowed_owned_windows = [""frontrunner""]
         key = ""ALT+S""
         action = ""cycle_stacked_window""
 
+# Jump to specific stacked window by position 
+    [hotkeys.jump_to_stacked_window_1]
+        key = ""WIN+1""
+        action = ""jump_to_stacked_window""
+
+    [hotkeys.jump_to_stacked_window_2]
+        key = ""WIN+2""
+        action = ""jump_to_stacked_window""
+
+    [hotkeys.jump_to_stacked_window_3]
+        key = ""WIN+3""
+        action = ""jump_to_stacked_window""
+
+    [hotkeys.jump_to_stacked_window_4]
+        key = ""WIN+4""
+        action = ""jump_to_stacked_window""
+
+    [hotkeys.jump_to_stacked_window_5]
+        key = ""WIN+5""
+        action = ""jump_to_stacked_window""
+
+    [hotkeys.jump_to_stacked_window_6]
+        key = ""WIN+6""
+        action = ""jump_to_stacked_window""
+
+    [hotkeys.jump_to_stacked_window_7]
+        key = ""WIN+7""
+        action = ""jump_to_stacked_window""
+
+    [hotkeys.jump_to_stacked_window_8]
+        key = ""WIN+8""
+        action = ""jump_to_stacked_window""
+
+    [hotkeys.jump_to_stacked_window_9]
+        key = ""WIN+9""
+        action = ""jump_to_stacked_window""
+
 # Toggle paused mode - windows can be moved freely without tiling
     [hotkeys.toggle_paused_mode]
         key = ""ALT+P""

@@ -209,6 +209,14 @@ namespace TilingWindowManager
                     CycleStackedWindow();
                     break;
 
+                case "jump_to_stacked_window":
+                    int windowIndex = ExtractWorkspaceNumberFromHotkey(hotkeyEntry);
+                    if (windowIndex >= 1 && windowIndex <= 9)
+                    {
+                        JumpToStackedWindow(windowIndex);
+                    }
+                    break;
+
                 case "toggle_paused_mode":
                     TogglePausedMode();
                     break;

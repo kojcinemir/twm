@@ -1134,5 +1134,43 @@ namespace TilingWindowManager
             var windows = currentWorkspace.GetStackableWindows();
             int currentIndex = currentWorkspace.GetCurrentStackedWindowIndex();
         }
+
+        private void JumpToStackedWindow(int windowIndex)
+        {
+            var activeMonitor = GetActiveMonitor();
+            if (activeMonitor == null)
+            {
+                return;
+            }
+
+            var currentWorkspace = activeMonitor.GetCurrentWorkspace();
+
+            if (!currentWorkspace.IsStackedMode)
+            {
+                return;
+            }
+
+            if (currentWorkspace.WindowCount == 0)
+            {
+                return;
+            }
+
+            var stackableWindows = currentWorkspace.GetStackableWindows();
+            if (stackableWindows.Count == 0)
+            {
+                return;
+            }
+
+            // convert from 1-based to 0-based index
+            int targetIndex = windowIndex - 1;
+
+            if (targetIndex < 0 || targetIndex >= stackableWindows.Count)
+            {
+                return;
+            }
+
+            currentWorkspace.SetCurrentStackedWindowIndex(targetIndex);
+            ApplyStackedLayout(activeMonitor, currentWorkspace);
+        }
     }
 }
