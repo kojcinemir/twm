@@ -1,13 +1,15 @@
-# Tiling Window Manager Hotkey Configuration 
+# Tiling Window Manager Hotkey Configuration
 
-
-# Don't force (kill process) of the application.            
+# Don't force (kill process) of the application.
 # USE exit_application hotkey. Default ALT+CTRL+O instead to force close
-
 
 #####CONFIG#####
 
-# If application is not recognized for tile 
+# Color Scheme Selection
+# Available options: "gruvbox", "tokyo-night", "nordic", "vscode", "everforest", "windows10"
+color_scheme = "gruvbox"
+
+# If application is not recognized for tile
 # Add process names (without .exe) here to include them
 allowed_owned_windows = ["frontrunner"]
 
@@ -35,17 +37,20 @@ allowed_owned_windows = ["frontrunner"]
     workspace_height = 40
     workspace_margin = 2
     icon_size = 16
-    active_workspace_border_color = 0xFB923C
-    background_color = 0x1c1c1c
-    active_workspace_color = 0x0f0f0f
-    hovered_workspace_color = 0x383838
-    inactive_workspace_color = 0x1c1c1c
-    active_workspace_text_color = 0x00FFFF
-    inactive_workspace_text_color = 0xFFFFFF
-    stacked_mode_workspace_color = 0x2a4a7c
-    stacked_mode_border_color = 0x2a4a7c
-    paused_workspace_color = 0x90EE90
-    paused_workspace_border_color = 0x90EE90
+
+    # Color settings - uncomment to override the color scheme
+    # active_workspace_border_color = 0xFB923C
+    # background_color = 0x1c1c1c
+    # active_workspace_color = 0x0f0f0f
+    # hovered_workspace_color = 0x383838
+    # inactive_workspace_color = 0x1c1c1c
+    # active_workspace_text_color = 0x00FFFF
+    # inactive_workspace_text_color = 0xFFFFFF
+    # stacked_mode_workspace_color = 0x2a4a7c
+    # stacked_mode_border_color = 0x2a4a7c
+    # paused_workspace_color = 0x90EE90
+    # paused_workspace_border_color = 0x90EE90
+
     offset_from_taskbar_left_edge = 0
     active_workspace_border_opacity = 255
 
@@ -60,19 +65,21 @@ allowed_owned_windows = ["frontrunner"]
     stacked_app_item_width_icon_only = 40        # Width of each app item when showing icon only
     stacked_app_title_max_length = 15            # Maximum characters for title before truncation
     stacked_app_margin = 2                       # Margin between stacked app items
-    stacked_app_background_color = 0x2a2a2a      # Background color for inactive stacked apps
-    stacked_app_hover_color = 0x3a3a3a           # Background color when hovering over a stacked app
-    stacked_app_active_color = 0x4a4a7c          # Background color for currently visible stacked app
-    stacked_app_text_color = 0xFFFFFF            # Text color for inactive stacked apps
-    stacked_app_active_text_color = 0xFB923C     # Text color for currently visible stacked app
+
+    # Stacked app colors - uncomment to override the color scheme
+    # stacked_app_background_color = 0x2a2a2a      # Background color for inactive stacked apps
+    # stacked_app_hover_color = 0x3a3a3a           # Background color when hovering over a stacked app
+    # stacked_app_active_color = 0x4a4a7c          # Background color for currently visible stacked app
+    # stacked_app_text_color = 0xFFFFFF            # Text color for inactive stacked apps
+    # stacked_app_active_text_color = 0xFB923C     # Text color for currently visible stacked app
 
 # Window Border Settings
 [window_border]
     border_width = 4
-    border_color = 0xFB923C
     rounded_borders = true
     corner_radius = 12
     opacity = 255
+	# border_color = 0xFB923C # uncomment to override default color palette 
 
 # Pinned Applications - Applications that should always appear on specific workspaces
 [pinned_applications]

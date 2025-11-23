@@ -49,10 +49,27 @@ namespace TilingWindowManager
                 string tomlContent = File.ReadAllText(configPath);
                 var model = Toml.ToModel(tomlContent);
 
+                string? colorSchemeName = null;
+                if (model.TryGetValue("color_scheme", out var schemeValue))
+                {
+                    colorSchemeName = schemeValue?.ToString();
+                    if (!string.IsNullOrWhiteSpace(colorSchemeName))
+                    {
+                        var scheme = ColorScheme.GetScheme(colorSchemeName);
+                        if (scheme != null)
+                        {
+                            BorderColor = scheme.BorderColor;
+                        }
+                    }
+                }
+
                 if (model.TryGetValue("window_border", out var borderObj) && borderObj is TomlTable borderTable)
                 {
                     BorderWidth = GetIntValue(borderTable, "border_width", BorderWidth);
-                    BorderColor = GetUintValue(borderTable, "border_color", BorderColor);
+
+                    if (borderTable.ContainsKey("border_color"))
+                        BorderColor = GetUintValue(borderTable, "border_color", BorderColor);
+
                     RoundedBorders = GetBoolValue(borderTable, "rounded_borders", RoundedBorders);
                     CornerRadius = GetIntValue(borderTable, "corner_radius", CornerRadius);
                     Opacity = GetByteValue(borderTable, "opacity", Opacity);
