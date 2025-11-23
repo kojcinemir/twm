@@ -33,6 +33,8 @@ namespace TilingWindowManager
         public int WorkspaceMargin { get; private set; } = 2;
         public int IconSize { get; private set; } = 16;
         public bool ShowOnlyOccupiedWorkspaces { get; private set; } = false;
+        public bool WorkspaceRoundedCorners { get; private set; } = false;
+        public int WorkspaceCornerRadius { get; private set; } = 8;
         public uint ActiveWorkspaceBorderColor { get; private set; } = 0xF4DB91;
         public uint BackgroundColor { get; private set; } = 0x1c1c1c;
         public uint ActiveWorkspaceColor { get; private set; } = 0x0f0f0f;
@@ -117,6 +119,8 @@ namespace TilingWindowManager
                     WorkspaceMargin = GetIntValue(indicatorTable, "workspace_margin", WorkspaceMargin);
                     IconSize = GetIntValue(indicatorTable, "icon_size", IconSize);
                     ShowOnlyOccupiedWorkspaces = GetBoolValue(indicatorTable, "show_only_occupied_workspaces", ShowOnlyOccupiedWorkspaces);
+                    WorkspaceRoundedCorners = GetBoolValue(indicatorTable, "workspace_rounded_corners", WorkspaceRoundedCorners);
+                    WorkspaceCornerRadius = GetIntValue(indicatorTable, "workspace_corner_radius", WorkspaceCornerRadius);
 
                     // only override color scheme colors if explicitly set in config
                     // this allows color scheme to be the base, with manual overrides

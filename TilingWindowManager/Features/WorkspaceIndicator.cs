@@ -215,6 +215,9 @@ namespace TilingWindowManager
         [DllImport("gdi32.dll")]
         private static extern IntPtr CreatePen(int fnPenStyle, int nWidth, uint crColor);
 
+        [DllImport("gdi32.dll")]
+        private static extern IntPtr GetStockObject(int fnObject);
+
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
         // windows api
@@ -373,6 +376,8 @@ namespace TilingWindowManager
         private int WORKSPACE_MARGIN => config.WorkspaceMargin;
         private int ICON_SIZE => config.IconSize;
         private bool SHOW_ONLY_OCCUPIED_WORKSPACES => config.ShowOnlyOccupiedWorkspaces;
+        private bool WORKSPACE_ROUNDED_CORNERS => config.WorkspaceRoundedCorners;
+        private int WORKSPACE_CORNER_RADIUS => config.WorkspaceCornerRadius;
         private int STACKED_APP_ICON_SIZE => config.StackedAppIconSize;
         private int STACKED_APP_ITEM_WIDTH => config.ShowStackedAppTitle ? config.StackedAppItemWidth : config.StackedAppItemWidthIconOnly;
         private int STACKED_APP_TITLE_MAX_LENGTH => config.StackedAppTitleMaxLength;
@@ -1477,10 +1482,31 @@ namespace TilingWindowManager
             else
                 workspaceBgColor = INACTIVE_WORKSPACE_COLOR;
 
-            IntPtr workspaceBrush = CreateSolidBrush(RgbToBgr(workspaceBgColor));
             var workspaceRect = new RECT { Left = x, Top = y, Right = x + WORKSPACE_WIDTH, Bottom = clientRect.Bottom - 5 };
-            FillRect(hdc, ref workspaceRect, workspaceBrush);
-            DeleteObject(workspaceBrush);
+
+            if (WORKSPACE_ROUNDED_CORNERS)
+            {
+                // Use RoundRect for rounded corners
+                IntPtr workspaceBrush = CreateSolidBrush(RgbToBgr(workspaceBgColor));
+                IntPtr workspacePen = CreatePen(0, 1, RgbToBgr(workspaceBgColor));
+                IntPtr oldBrush = SelectObject(hdc, workspaceBrush);
+                IntPtr oldPen = SelectObject(hdc, workspacePen);
+
+                RoundRect(hdc, workspaceRect.Left, workspaceRect.Top, workspaceRect.Right, workspaceRect.Bottom,
+                         WORKSPACE_CORNER_RADIUS * 2, WORKSPACE_CORNER_RADIUS * 2);
+
+                SelectObject(hdc, oldBrush);
+                SelectObject(hdc, oldPen);
+                DeleteObject(workspaceBrush);
+                DeleteObject(workspacePen);
+            }
+            else
+            {
+                // Use regular rectangle
+                IntPtr workspaceBrush = CreateSolidBrush(RgbToBgr(workspaceBgColor));
+                FillRect(hdc, ref workspaceRect, workspaceBrush);
+                DeleteObject(workspaceBrush);
+            }
 
             // draw workspace content
             if (allWorkspaces.ContainsKey(workspaceId) && allWorkspaces[workspaceId].Count > 0)
@@ -1508,17 +1534,36 @@ namespace TilingWindowManager
                 else
                     borderColor = STACKED_MODE_BORDER_COLOR;
 
-                var topBorder = new RECT { Left = x, Top = y, Right = x + WORKSPACE_WIDTH, Bottom = y + 2 };
-                DrawAlphaBlendedRect(hdc, topBorder, borderColor, ACTIVE_WORKSPACE_BORDER_OPACITY);
+                if (WORKSPACE_ROUNDED_CORNERS)
+                {
+                    // Draw rounded border using RoundRect
+                    IntPtr borderPen = CreatePen(0, 2, RgbToBgr(borderColor));
+                    IntPtr oldPen = SelectObject(hdc, borderPen);
+                    IntPtr oldBrush = SelectObject(hdc, GetStockObject(5)); // NULL_BRUSH
 
-                var bottomBorder = new RECT { Left = x, Top = clientRect.Bottom - 7, Right = x + WORKSPACE_WIDTH, Bottom = clientRect.Bottom - 5 };
-                DrawAlphaBlendedRect(hdc, bottomBorder, borderColor, ACTIVE_WORKSPACE_BORDER_OPACITY);
+                    RoundRect(hdc, workspaceRect.Left + 1, workspaceRect.Top + 1,
+                             workspaceRect.Right - 1, workspaceRect.Bottom - 1,
+                             WORKSPACE_CORNER_RADIUS * 2, WORKSPACE_CORNER_RADIUS * 2);
 
-                var leftBorder = new RECT { Left = x, Top = y, Right = x + 2, Bottom = clientRect.Bottom - 5 };
-                DrawAlphaBlendedRect(hdc, leftBorder, borderColor, ACTIVE_WORKSPACE_BORDER_OPACITY);
+                    SelectObject(hdc, oldBrush);
+                    SelectObject(hdc, oldPen);
+                    DeleteObject(borderPen);
+                }
+                else
+                {
+                    // Draw regular rectangular borders
+                    var topBorder = new RECT { Left = x, Top = y, Right = x + WORKSPACE_WIDTH, Bottom = y + 2 };
+                    DrawAlphaBlendedRect(hdc, topBorder, borderColor, ACTIVE_WORKSPACE_BORDER_OPACITY);
 
-                var rightBorder = new RECT { Left = x + WORKSPACE_WIDTH - 2, Top = y, Right = x + WORKSPACE_WIDTH, Bottom = clientRect.Bottom - 5 };
-                DrawAlphaBlendedRect(hdc, rightBorder, borderColor, ACTIVE_WORKSPACE_BORDER_OPACITY);
+                    var bottomBorder = new RECT { Left = x, Top = clientRect.Bottom - 7, Right = x + WORKSPACE_WIDTH, Bottom = clientRect.Bottom - 5 };
+                    DrawAlphaBlendedRect(hdc, bottomBorder, borderColor, ACTIVE_WORKSPACE_BORDER_OPACITY);
+
+                    var leftBorder = new RECT { Left = x, Top = y, Right = x + 2, Bottom = clientRect.Bottom - 5 };
+                    DrawAlphaBlendedRect(hdc, leftBorder, borderColor, ACTIVE_WORKSPACE_BORDER_OPACITY);
+
+                    var rightBorder = new RECT { Left = x + WORKSPACE_WIDTH - 2, Top = y, Right = x + WORKSPACE_WIDTH, Bottom = clientRect.Bottom - 5 };
+                    DrawAlphaBlendedRect(hdc, rightBorder, borderColor, ACTIVE_WORKSPACE_BORDER_OPACITY);
+                }
             }
         }
 
@@ -1668,9 +1713,30 @@ namespace TilingWindowManager
                     Right = itemX + STACKED_APP_ITEM_WIDTH,
                     Bottom = y + itemHeight
                 };
-                IntPtr bgBrush = CreateSolidBrush(RgbToBgr(bgColor));
-                FillRect(hdc, ref itemRect, bgBrush);
-                DeleteObject(bgBrush);
+
+                if (WORKSPACE_ROUNDED_CORNERS)
+                {
+                    // Use RoundRect for rounded corners
+                    IntPtr bgBrush = CreateSolidBrush(RgbToBgr(bgColor));
+                    IntPtr bgPen = CreatePen(0, 1, RgbToBgr(bgColor));
+                    IntPtr oldBrush = SelectObject(hdc, bgBrush);
+                    IntPtr oldPen = SelectObject(hdc, bgPen);
+
+                    RoundRect(hdc, itemRect.Left, itemRect.Top, itemRect.Right, itemRect.Bottom,
+                             WORKSPACE_CORNER_RADIUS * 2, WORKSPACE_CORNER_RADIUS * 2);
+
+                    SelectObject(hdc, oldBrush);
+                    SelectObject(hdc, oldPen);
+                    DeleteObject(bgBrush);
+                    DeleteObject(bgPen);
+                }
+                else
+                {
+                    // Use regular rectangle
+                    IntPtr bgBrush = CreateSolidBrush(RgbToBgr(bgColor));
+                    FillRect(hdc, ref itemRect, bgBrush);
+                    DeleteObject(bgBrush);
+                }
 
                 // draw icon
                 if (window.Icon != IntPtr.Zero)
