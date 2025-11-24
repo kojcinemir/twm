@@ -364,6 +364,16 @@ allowed_owned_windows = [""frontrunner""]
         key = ""ALT+S""
         action = ""cycle_stacked_window""
 
+# Move stacked window position left (earlier in Z-order)
+    [hotkeys.move_stacked_window_left]
+        key = ""ALT+SHIFT+,""
+        action = ""move_stacked_window_left""
+
+# Move stacked window position right (later in Z-order)
+    [hotkeys.move_stacked_window_right]
+        key = ""ALT+SHIFT+.""
+        action = ""move_stacked_window_right""
+
 # Jump to specific stacked window by position 
     [hotkeys.jump_to_stacked_window_1]
         key = ""WIN+1""

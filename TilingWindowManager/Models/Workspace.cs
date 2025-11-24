@@ -326,6 +326,44 @@ namespace TilingWindowManager
             }
         }
 
+        public void MoveStackedWindowLeft()
+        {
+            if (!isStackedMode)
+                return;
+
+            var stackableWindows = GetStackableWindows();
+            if (stackableWindows.Count <= 1)
+                return;
+
+            var currentWindow = stackableWindows[currentStackedWindowIndex];
+            if (windows.MoveWindowInList(currentWindow, -1))
+            {
+                if (currentStackedWindowIndex > 0)
+                {
+                    currentStackedWindowIndex--;
+                }
+            }
+        }
+
+        public void MoveStackedWindowRight()
+        {
+            if (!isStackedMode)
+                return;
+
+            var stackableWindows = GetStackableWindows();
+            if (stackableWindows.Count <= 1)
+                return;
+
+            var currentWindow = stackableWindows[currentStackedWindowIndex];
+            if (windows.MoveWindowInList(currentWindow, 1))
+            {
+                if (currentStackedWindowIndex < stackableWindows.Count - 1)
+                {
+                    currentStackedWindowIndex++;
+                }
+            }
+        }
+
         public override string ToString()
         {
             return $"{Name} ({WindowCount} windows)";
