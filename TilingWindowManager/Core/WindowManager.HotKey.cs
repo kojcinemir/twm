@@ -133,19 +133,47 @@ namespace TilingWindowManager
                     break;
 
                 case "swap_left":
-                    SwapActiveWindowInDirection(BSPTiling.FocusDirection.Left);
+                    if (activeMonitor != null && activeMonitor.GetCurrentWorkspace().IsStackedMode)
+                    {
+                        MoveStackedWindowLeft();
+                    }
+                    else
+                    {
+                        SwapActiveWindowInDirection(BSPTiling.FocusDirection.Left);
+                    }
                     break;
 
                 case "swap_right":
-                    SwapActiveWindowInDirection(BSPTiling.FocusDirection.Right);
+                    if (activeMonitor != null && activeMonitor.GetCurrentWorkspace().IsStackedMode)
+                    {
+                        MoveStackedWindowRight();
+                    }
+                    else
+                    {
+                        SwapActiveWindowInDirection(BSPTiling.FocusDirection.Right);
+                    }
                     break;
 
                 case "swap_down":
-                    SwapActiveWindowInDirection(BSPTiling.FocusDirection.Down);
+                    if (activeMonitor != null && activeMonitor.GetCurrentWorkspace().IsStackedMode)
+                    {
+                        MoveStackedWindowRight();
+                    }
+                    else
+                    {
+                        SwapActiveWindowInDirection(BSPTiling.FocusDirection.Down);
+                    }
                     break;
 
                 case "swap_up":
-                    SwapActiveWindowInDirection(BSPTiling.FocusDirection.Up);
+                    if (activeMonitor != null && activeMonitor.GetCurrentWorkspace().IsStackedMode)
+                    {
+                        MoveStackedWindowLeft();
+                    }
+                    else
+                    {
+                        SwapActiveWindowInDirection(BSPTiling.FocusDirection.Up);
+                    }
                     break;
 
                 case "switch_monitor_left":
