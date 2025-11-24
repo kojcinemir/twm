@@ -143,13 +143,21 @@ namespace TilingWindowManager
                 {
 
                     SuspendBorderForForeground();
-                    workspace.ApplyTiling();
 
-                    foreach (var w in validWindows)
+                    if (workspace.IsStackedMode)
                     {
-                        if (GetWindowRect(w, out RECT rect))
+                        ApplyStackedLayout(monitor, workspace);
+                    }
+                    else
+                    {
+                        workspace.ApplyTiling();
+
+                        foreach (var w in validWindows)
                         {
-                            monitor.TrackWindowPositions(w, rect);
+                            if (GetWindowRect(w, out RECT rect))
+                            {
+                                monitor.TrackWindowPositions(w, rect);
+                            }
                         }
                     }
 

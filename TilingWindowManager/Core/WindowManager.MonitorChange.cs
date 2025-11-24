@@ -168,6 +168,7 @@ namespace TilingWindowManager
             public DateTime BackedUpAt { get; set; }
             public int MonitorCount { get; set; } // total monitor count when this was backed up
             public Dictionary<int, List<nint>> WorkspaceWindows { get; set; } = new Dictionary<int, List<nint>>();
+            public Dictionary<int, bool> WorkspaceStackedMode { get; set; } = new Dictionary<int, bool>();
         }
         public void InitializeMonitorChangeDetection()
         {
@@ -345,6 +346,7 @@ namespace TilingWindowManager
                     if (workspace != null && workspace.WindowCount > 0)
                     {
                         backup.WorkspaceWindows[i] = workspace.GetAllWindows().ToList();
+                        backup.WorkspaceStackedMode[i] = workspace.IsStackedMode;
                         totalWindows += workspace.WindowCount;
                     }
                 }
@@ -543,6 +545,16 @@ namespace TilingWindowManager
                                 Logger.Error($"[RESTORE-WINDOWS] ERROR: Could not restore window 0x{window.ToInt64():X}: {ex.Message}");
                             }
                         }
+
+                        // restore stacked mode state
+                        if (workspace.IsStackedMode)
+                        {
+                            var targetWorkspace = targetMonitor.GetWorkspaceAtIndex(i);
+                            if (targetWorkspace != null)
+                            {
+                                targetWorkspace.EnableStackedMode();
+                            }
+                        }
                     }
                 }
             }
@@ -568,6 +580,16 @@ namespace TilingWindowManager
                         }
                         catch (Exception ex)
                         {
+                        }
+                    }
+
+                    // restore stacked mode state from backup
+                    if (backup.WorkspaceStackedMode.TryGetValue(workspaceId, out bool isStackedMode) && isStackedMode)
+                    {
+                        var targetWorkspace = targetMonitor.GetWorkspaceAtIndex(workspaceId);
+                        if (targetWorkspace != null)
+                        {
+                            targetWorkspace.EnableStackedMode();
                         }
                     }
                 }
