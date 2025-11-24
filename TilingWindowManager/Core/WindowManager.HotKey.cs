@@ -209,6 +209,14 @@ namespace TilingWindowManager
                     CycleStackedWindow();
                     break;
 
+                case "move_stacked_window_left":
+                    MoveStackedWindowLeft();
+                    break;
+
+                case "move_stacked_window_right":
+                    MoveStackedWindowRight();
+                    break;
+
                 case "jump_to_stacked_window":
                     int windowIndex = ExtractWorkspaceNumberFromHotkey(hotkeyEntry);
                     if (windowIndex >= 1 && windowIndex <= 9)

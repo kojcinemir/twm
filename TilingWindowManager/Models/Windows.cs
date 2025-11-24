@@ -265,6 +265,21 @@ namespace TilingWindowManager
             return windowList.Where(w => IsValidTileableWindow(w) && !IsIconic(w)).ToList();
         }
 
+        public bool MoveWindowInList(nint window, int offset)
+        {
+            int currentIndex = windowList.IndexOf(window);
+            if (currentIndex < 0)
+                return false;
+
+            int newIndex = currentIndex + offset;
+            if (newIndex < 0 || newIndex >= windowList.Count)
+                return false;
+
+            windowList.RemoveAt(currentIndex);
+            windowList.Insert(newIndex, window);
+            return true;
+        }
+
         private string GetWindowTitle(nint window)
         {
             var title = new StringBuilder(256);
