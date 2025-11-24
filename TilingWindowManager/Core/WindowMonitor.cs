@@ -274,7 +274,7 @@ namespace TilingWindowManager
             }
         }
 
-        public bool IsValidApplicationWindow(IntPtr hWnd, bool allowUntitled = false, int minWidth = 48, int minHeight = 48, double requireAreaShare = 0.5)
+        public bool IsValidApplicationWindow(IntPtr hWnd, bool allowUntitled = false, int minWidth = 250, int minHeight = 250, double requireAreaShare = 0.5)
         {
 
             if (hWnd == IntPtr.Zero) return false;
