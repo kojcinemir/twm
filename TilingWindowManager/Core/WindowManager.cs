@@ -359,6 +359,28 @@ namespace TilingWindowManager
                     }
                 }
             };
+
+            windowMonitor.WindowTitleChanged += (sender, e) =>
+            {
+                foreach (var m in monitors)
+                {
+                    var workspace = m.FindWorkspaceContaining(e.WindowHandle);
+                    if (workspace != null && workspace.IsStackedMode)
+                    {
+                        if (m.CurrentWorkspaceId == workspace.Id)
+                        {
+                            var stackableWindows = workspace.GetStackableWindows();
+                            int currentIndex = workspace.GetCurrentStackedWindowIndex();
+                            if (currentIndex >= 0 && currentIndex < stackableWindows.Count &&
+                                stackableWindows[currentIndex] == e.WindowHandle)
+                            {
+                                Monitor.UpdateStackedAppTitle(m.Index, e.WindowHandle, e.WindowTitle);
+                            }
+                        }
+                        break;
+                    }
+                }
+            };
         }
 
 

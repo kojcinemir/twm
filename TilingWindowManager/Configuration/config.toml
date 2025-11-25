@@ -63,10 +63,10 @@ allowed_owned_windows = ["frontrunner"]
 
     # Stacked App Display Settings (shown when workspace is in stacked mode)
     show_stacked_app_title = false               # Show title text next to icon (true) or just icon (false)
+    stacked_app_title_max_length = 30            # Maximum characters for title before truncation
     stacked_app_icon_size = 24                   # Size of application icons in pixels
     stacked_app_item_width = 150                 # Width of each app item when showing icon + title
     stacked_app_item_width_icon_only = 40        # Width of each app item when showing icon only
-    stacked_app_title_max_length = 15            # Maximum characters for title before truncation
     stacked_app_margin = 2                       # Margin between stacked app items
 
     # Stacked App Shortcut Badge Settings (displays keyboard shortcut letters on stacked app icons)

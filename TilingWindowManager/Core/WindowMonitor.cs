@@ -106,6 +106,7 @@ namespace TilingWindowManager
         private const uint EVENT_OBJECT_CREATE = 0x8000;
         private const uint EVENT_OBJECT_DESTROY = 0x8001;
         private const uint EVENT_OBJECT_SHOW = 0x8002;
+        private const uint EVENT_OBJECT_NAMECHANGE = 0x800C;
         private const uint WINEVENT_OUTOFCONTEXT = 0x0000;
         private const uint GW_OWNER = 4;
         private const int GWL_EXSTYLE = -20;
@@ -131,6 +132,7 @@ namespace TilingWindowManager
         private nint _createHook = nint.Zero;
         private nint _showHook = nint.Zero;
         private nint _destroyHook = nint.Zero;
+        private nint _nameChangeHook = nint.Zero;
 
         private WinEventDelegate _winEventProc;
         private GCHandle _winEventProcHandle; // GCHandle to pin delegate
@@ -151,6 +153,7 @@ namespace TilingWindowManager
         public event EventHandler<WindowEventArgs>? WindowCreated;
         public event EventHandler<WindowEventArgs>? WindowDestroyed;
         public event EventHandler<WindowEventArgs>? WindowShown;
+        public event EventHandler<WindowEventArgs>? WindowTitleChanged;
 
         public WindowMonitor()
         {
@@ -183,7 +186,12 @@ namespace TilingWindowManager
                 EVENT_OBJECT_DESTROY, EVENT_OBJECT_DESTROY,
                 nint.Zero, _winEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
 
-            if (_createHook == nint.Zero || _showHook == nint.Zero || _destroyHook == nint.Zero)
+            // hook for window name/title changes
+            _nameChangeHook = SetWinEventHook(
+                EVENT_OBJECT_NAMECHANGE, EVENT_OBJECT_NAMECHANGE,
+                nint.Zero, _winEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+
+            if (_createHook == nint.Zero || _showHook == nint.Zero || _destroyHook == nint.Zero || _nameChangeHook == nint.Zero)
             {
                 StopMonitoring();
                 int error = Marshal.GetLastWin32Error();
@@ -209,6 +217,12 @@ namespace TilingWindowManager
             {
                 UnhookWinEvent(_destroyHook);
                 _destroyHook = nint.Zero;
+            }
+
+            if (_nameChangeHook != nint.Zero)
+            {
+                UnhookWinEvent(_nameChangeHook);
+                _nameChangeHook = nint.Zero;
             }
 
             if (_winEventProcHandle.IsAllocated)
@@ -258,12 +272,21 @@ namespace TilingWindowManager
                         break;
 
                     case EVENT_OBJECT_DESTROY:
-                        // only fire event if this widnow is tracked 
+                        // only fire event if this widnow is tracked
                         if (trackedWindows.Contains(hwnd))
                         {
                             trackedWindows.Remove(hwnd);
                             WindowEventArgs args = CreateWindowEventArgs(hwnd);
                             WindowDestroyed?.Invoke(this, args);
+                        }
+                        break;
+
+                    case EVENT_OBJECT_NAMECHANGE:
+                        // only fire event if this window is tracked 
+                        if (trackedWindows.Contains(hwnd))
+                        {
+                            WindowEventArgs args = CreateWindowEventArgs(hwnd);
+                            WindowTitleChanged?.Invoke(this, args);
                         }
                         break;
                 }

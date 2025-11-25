@@ -253,6 +253,11 @@ namespace TilingWindowManager
             sharedWorkspaceIndicator?.UpdateMonitors(monitors);
         }
 
+        public static void UpdateStackedAppTitle(int monitorIndex, IntPtr windowHandle, string newTitle)
+        {
+            sharedWorkspaceIndicator?.UpdateStackedAppTitle(monitorIndex, windowHandle, newTitle);
+        }
+
         public static void CleanupWorkspaceIndicator()
         {
             sharedWorkspaceIndicator?.Cleanup();
