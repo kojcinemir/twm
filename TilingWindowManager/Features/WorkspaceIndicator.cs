@@ -379,9 +379,10 @@ namespace TilingWindowManager
         private bool WORKSPACE_ROUNDED_CORNERS => config.WorkspaceRoundedCorners;
         private int WORKSPACE_CORNER_RADIUS => config.WorkspaceCornerRadius;
         private int STACKED_APP_ICON_SIZE => config.StackedAppIconSize;
-        private int STACKED_APP_ITEM_WIDTH => config.ShowStackedAppTitle ? config.StackedAppItemWidth : config.StackedAppItemWidthIconOnly;
+        private int STACKED_APP_ITEM_WIDTH => config.StackedAppItemWidthIconOnly; // Always use icon-only width
         private int STACKED_APP_TITLE_MAX_LENGTH => config.StackedAppTitleMaxLength;
         private int STACKED_APP_MARGIN => config.StackedAppMargin;
+        private int STACKED_APP_TITLE_AREA_WIDTH => 200; // Width for active app title display area
         private bool SHOW_STACKED_APP_TITLE => config.ShowStackedAppTitle;
         private uint ACTIVE_WORKSPACE_BORDER_COLOR => config.ActiveWorkspaceBorderColor;
         private uint BACKGROUND_COLOR => config.BackgroundColor;
@@ -678,6 +679,40 @@ namespace TilingWindowManager
             return true;
         }
 
+        public void UpdateStackedAppTitle(int monitorIndex, IntPtr windowHandle, string newTitle)
+        {
+            IntPtr indicatorHandle = IntPtr.Zero;
+            bool needsRedraw = false;
+
+            lock (lockObject)
+            {
+                if (monitorIndicators.TryGetValue(monitorIndex, out var indicatorData))
+                {
+                    indicatorHandle = indicatorData.WindowHandle;
+
+                    // find and update the window title in the current workspace
+                    if (indicatorData.WorkspaceWindows.TryGetValue(indicatorData.CurrentWorkspace, out var windows))
+                    {
+                        foreach (var window in windows)
+                        {
+                            if (window.Handle == windowHandle)
+                            {
+                                window.Title = newTitle;
+                                needsRedraw = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // trigger repaint of just the title area if window is found and need repaint
+            if (needsRedraw && indicatorHandle != IntPtr.Zero)
+            {
+                PostMessage(indicatorHandle, WM_UPDATE_WORKSPACE, IntPtr.Zero, IntPtr.Zero);
+            }
+        }
+
         public void UpdateMonitor(int monitorIndex, int currentWorkspaceId, List<Workspace> workspaces)
         {
             var workspaceHandles = new Dictionary<int, List<IntPtr>>();
@@ -968,6 +1003,11 @@ namespace TilingWindowManager
                 if (indicatorData.WorkspaceWindows.TryGetValue(indicatorData.CurrentWorkspace, out var windows) && windows != null && windows.Count > 0)
                 {
                     int stackedAppWidth = windows.Count * (STACKED_APP_ITEM_WIDTH + STACKED_APP_MARGIN) + STACKED_APP_MARGIN;
+                    // add title area width if showing stacked app titles
+                    if (SHOW_STACKED_APP_TITLE)
+                    {
+                        stackedAppWidth += STACKED_APP_TITLE_AREA_WIDTH + STACKED_APP_MARGIN;
+                    }
                     return baseWidth + stackedAppWidth;
                 }
             }
@@ -1681,6 +1721,7 @@ namespace TilingWindowManager
             int y = 5;
             int itemHeight = clientRect.Bottom - 10;
 
+            // Draw app icons (always in icon-only mode)
             for (int i = 0; i < windows.Count; i++)
             {
                 var window = windows[i];
@@ -1688,21 +1729,17 @@ namespace TilingWindowManager
 
                 // determine background color
                 uint bgColor;
-                uint textColor;
                 if (i == currentStackedIndex)
                 {
                     bgColor = STACKED_APP_ACTIVE_COLOR;
-                    textColor = STACKED_APP_ACTIVE_TEXT_COLOR;
                 }
                 else if (i == hoveredStackedIndex)
                 {
                     bgColor = STACKED_APP_HOVER_COLOR;
-                    textColor = STACKED_APP_TEXT_COLOR;
                 }
                 else
                 {
                     bgColor = STACKED_APP_BACKGROUND_COLOR;
-                    textColor = STACKED_APP_TEXT_COLOR;
                 }
 
                 // draw background
@@ -1738,20 +1775,10 @@ namespace TilingWindowManager
                     DeleteObject(bgBrush);
                 }
 
-                // draw icon
+                // draw icon (always centered in icon-only mode)
                 if (window.Icon != IntPtr.Zero)
                 {
-                    int iconX;
-                    if (SHOW_STACKED_APP_TITLE)
-                    {
-                        // icon on left side when title is shown
-                        iconX = itemX + 8;
-                    }
-                    else
-                    {
-                        // center icon when title is hidden
-                        iconX = itemX + (STACKED_APP_ITEM_WIDTH - STACKED_APP_ICON_SIZE) / 2;
-                    }
+                    int iconX = itemX + (STACKED_APP_ITEM_WIDTH - STACKED_APP_ICON_SIZE) / 2;
                     int iconY = y + (itemHeight - STACKED_APP_ICON_SIZE) / 2;
                     DrawIconEx(hdc, iconX, iconY, window.Icon, STACKED_APP_ICON_SIZE, STACKED_APP_ICON_SIZE, 0, IntPtr.Zero, 0x0003);
 
@@ -1763,30 +1790,45 @@ namespace TilingWindowManager
                         DrawNumberBadge(hdc, badgeX, badgeY, STACKED_WINDOW_SHORTCUT_LABELS[i]);
                     }
                 }
-
-                // draw title (only if enabled)
-                if (SHOW_STACKED_APP_TITLE)
-                {
-                    string title = window.Title;
-                    if (title.Length > STACKED_APP_TITLE_MAX_LENGTH)
-                    {
-                        title = title.Substring(0, STACKED_APP_TITLE_MAX_LENGTH - 3) + "...";
-                    }
-
-                    SetBkMode(hdc, 1); // transparent
-                    SetTextColor(hdc, textColor);
-
-                    var textRect = new RECT
-                    {
-                        Left = itemX + 8 + STACKED_APP_ICON_SIZE + 5,
-                        Top = y,
-                        Right = itemX + STACKED_APP_ITEM_WIDTH - 5,
-                        Bottom = y + itemHeight
-                    };
-                    // DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS
-                    DrawText(hdc, title, -1, ref textRect, 0x20 | 0x04 | 0x800 | 0x8000);
-                }
             }
+
+            // if enabled draw active app title in separate area after icons 
+            if (SHOW_STACKED_APP_TITLE && currentStackedIndex >= 0 && currentStackedIndex < windows.Count)
+            {
+                DrawActiveAppTitle(hdc, windows[currentStackedIndex], baseX, y, itemHeight, windows.Count);
+            }
+        }
+
+        private void DrawActiveAppTitle(IntPtr hdc, WorkspaceWindow activeWindow, int baseX, int y, int itemHeight, int appCount)
+        {
+            // calculate position after last app icon with minimal spacing
+            int titleX = baseX + (appCount * (STACKED_APP_ITEM_WIDTH + STACKED_APP_MARGIN)) + STACKED_APP_MARGIN * 3;
+
+            string title = activeWindow.Title;
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                title = "Untitled";
+            }
+
+            // truncate if too long 
+            if (title.Length > STACKED_APP_TITLE_MAX_LENGTH)
+            {
+                title = title.Substring(0, STACKED_APP_TITLE_MAX_LENGTH - 3) + "...";
+            }
+
+            SetBkMode(hdc, 1); // transparent background
+            SetTextColor(hdc, RgbToBgr(0xFFFFFF)); 
+
+            var textRect = new RECT
+            {
+                Left = titleX,
+                Top = y,
+                Right = titleX + STACKED_APP_TITLE_AREA_WIDTH,
+                Bottom = y + itemHeight
+            };
+
+            // DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS
+            DrawText(hdc, title, -1, ref textRect, 0x04 | 0x20 | 0x800 | 0x8000);
         }
 
         private void DrawWorkspaceNumber(IntPtr hdc, int workspaceX, int workspaceY, int workspaceId, int currentWS, int workspaceHeight)
