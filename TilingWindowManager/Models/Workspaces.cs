@@ -77,7 +77,11 @@ namespace TilingWindowManager
                 var previousWorkspace = GetCurrentWorkspace();
                 var newWorkspace = GetWorkspace(workspaceId);
 
-                newWorkspace.ShowAllWindows();
+                if (!newWorkspace.IsStackedMode)
+                {
+                    newWorkspace.ShowAllWindows();
+                }
+
                 previousWorkspace.HideAllWindows();
 
                 currentWorkspaceId = workspaceId;

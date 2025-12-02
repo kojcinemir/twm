@@ -605,6 +605,11 @@ namespace TilingWindowManager
 
         public void SwitchToWorkspace(int workspaceId, int monitorIndex, bool activateBorderLastWindow)
         {
+            SwitchToWorkspace(workspaceId, monitorIndex, activateBorderLastWindow, autoFocusWindow: true);
+        }
+
+        public void SwitchToWorkspace(int workspaceId, int monitorIndex, bool activateBorderLastWindow, bool autoFocusWindow)
+        {
 
             var monitor = GetMonitorByIndex(monitorIndex);
             if (monitor == null)
@@ -625,12 +630,23 @@ namespace TilingWindowManager
             lastActiveMonitorIndex = monitorIndex;
 
             var currentWorkspace = monitor.GetCurrentWorkspace();
+            var targetWorkspace = monitor.GetWorkspace(workspaceId);
 
             windowBorder.HideAllBorders();
 
-            monitor.SwitchToWorkspace(workspaceId);
+            // for stacked mode, show target window FIRST to avoid desktop flash
+            if (targetWorkspace.IsStackedMode && autoFocusWindow && targetWorkspace.WindowCount > 0)
+            {
+                var stackableWindows = targetWorkspace.GetStackableWindows();
+                int currentIndex = targetWorkspace.GetCurrentStackedWindowIndex();
+                if (currentIndex >= 0 && currentIndex < stackableWindows.Count)
+                {
+                    // show the target window before switching to prevent desktop flash
+                    ShowWindow(stackableWindows[currentIndex], SW_RESTORE);
+                }
+            }
 
-            var targetWorkspace = monitor.GetCurrentWorkspace();
+            monitor.SwitchToWorkspace(workspaceId);
 
             bool shouldActivateLastWindow = activateBorderLastWindow && activeWindowFollowsMouse && targetWorkspace.WindowCount > 0;
             windowBorder.SetCurrentWorkspace(workspaceId, monitor.Handle, shouldActivateLastWindow);
@@ -639,14 +655,19 @@ namespace TilingWindowManager
             {
                 windowBorder.HideAllBorders();
             }
-            else
+            else if (autoFocusWindow)
             {
-                FocusLastActiveOrRootWindow(targetWorkspace);
+                if (targetWorkspace.IsStackedMode)
+                {
+                    ApplyStackedLayout(monitor, targetWorkspace);
+                }
+                else
+                {
+                    FocusLastActiveOrRootWindow(targetWorkspace);
+                }
             }
 
-            // Ensure the border is updated immediately for the (new) foreground window
             RefreshBorderForForeground();
-
             UpdateWorkspaceIndicator();
         }
 

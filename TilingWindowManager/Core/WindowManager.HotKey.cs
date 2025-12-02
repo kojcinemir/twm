@@ -263,6 +263,14 @@ namespace TilingWindowManager
                     Environment.Exit(0);
                     break;
 
+                case "open_app_switcher":
+                    if (activeMonitor != null)
+                    {
+                        var allWindows = CollectAllWindows();
+                        appSwitcher.Show(allWindows, activeMonitor);
+                    }
+                    break;
+
                 case "reload_allowed_owned_windows":
                     ReloadAllowedOwnedWindows();
                     break;
