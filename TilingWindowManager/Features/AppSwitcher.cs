@@ -33,6 +33,9 @@ namespace TilingWindowManager
         private static extern bool UnregisterClass(string lpClassName, IntPtr hInstance);
 
         [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr LoadCursor(IntPtr hInstance, int lpCursorName);
+
+        [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr CreateWindowEx(
             int dwExStyle, string lpClassName, string lpWindowName,
             uint dwStyle, int x, int y, int nWidth, int nHeight,
@@ -139,6 +142,7 @@ namespace TilingWindowManager
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
         private const string WINDOW_CLASS_NAME = "TilingWMAppSwitcher";
+        private const int IDC_ARROW = 32512;
 
         private const uint WM_PAINT = 0x000F;
         private const uint WM_DESTROY = 0x0002;
@@ -146,6 +150,8 @@ namespace TilingWindowManager
         private const uint WM_CHAR = 0x0102;
         private const uint WM_ACTIVATE = 0x0006;
         private const uint WM_KILLFOCUS = 0x0008;
+        private const uint WM_MOUSEWHEEL = 0x020A;
+        private const uint WM_LBUTTONDOWN = 0x0201;
 
         private const uint WS_POPUP = 0x80000000;
         private const uint WS_VISIBLE = 0x10000000;
@@ -263,12 +269,14 @@ namespace TilingWindowManager
         private List<WindowSearchEntry> filteredWindows = new List<WindowSearchEntry>();
         private string searchText = "";
         private int selectedIndex = 0;
+        private int scrollOffset = 0;
         private Monitor activeMonitor;
 
         private IntPtr normalFont;
         private IntPtr boldFont;
 
         public event Action<nint> WindowSelected;
+        public bool IsVisible => isVisible;
 
         public AppSwitcher()
         {
@@ -330,6 +338,22 @@ namespace TilingWindowManager
             }
         }
 
+        public void NavigateUp()
+        {
+            if (isVisible && windowHandle != IntPtr.Zero)
+            {
+                PostMessage(windowHandle, WM_KEYDOWN, new IntPtr(VK_UP), IntPtr.Zero);
+            }
+        }
+
+        public void NavigateDown()
+        {
+            if (isVisible && windowHandle != IntPtr.Zero)
+            {
+                PostMessage(windowHandle, WM_KEYDOWN, new IntPtr(VK_DOWN), IntPtr.Zero);
+            }
+        }
+
         public void Cleanup()
         {
             isRunning = false;
@@ -360,7 +384,7 @@ namespace TilingWindowManager
                         cbWndExtra = 0,
                         hInstance = moduleHandle,
                         hIcon = IntPtr.Zero,
-                        hCursor = IntPtr.Zero,
+                        hCursor = LoadCursor(IntPtr.Zero, IDC_ARROW), 
                         hbrBackground = CreateSolidBrush(RgbToBgr(config.BackgroundColor)),
                         lpszMenuName = null,
                         lpszClassName = WINDOW_CLASS_NAME,
@@ -389,9 +413,6 @@ namespace TilingWindowManager
                     OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
                     DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
 
-                // Create an initial hidden window to receive messages, offscreen!!!
-                Logger.Info($"Creating window with atom: {classAtom}, hInstance: {moduleHandle}");
-
                 windowHandle = CreateWindowExAtom(
                     WS_EX_TOOLWINDOW, // tool window-> so it doesn't appear on taskbar 
                     classAtom,
@@ -410,7 +431,6 @@ namespace TilingWindowManager
                     return;
                 }
 
-                Logger.Info($"AppSwitcher initial window created successfully, handle: {windowHandle}");
                 windowReadyEvent.Set(); 
 
                 // Message loop
@@ -465,7 +485,8 @@ namespace TilingWindowManager
             }
 
             int width = config.Width;
-            int height = config.Height;
+            // use calculated height to ensure all items fit
+            int height = Math.Max(config.Height, config.GetCalculatedHeight());
             int x = activeMonitor.WorkArea.Left + (activeMonitor.WorkArea.Width - width) / 2;
             int y = activeMonitor.WorkArea.Top + (activeMonitor.WorkArea.Height - height) / 2;
 
@@ -522,6 +543,14 @@ namespace TilingWindowManager
                         HandleChar((char)wParam);
                         return IntPtr.Zero;
 
+                    case WM_MOUSEWHEEL:
+                        HandleMouseWheel(wParam);
+                        return IntPtr.Zero;
+
+                    case WM_LBUTTONDOWN:
+                        HandleMouseClick(lParam);
+                        return IntPtr.Zero;
+
                     case WM_KILLFOCUS:
                         Hide();
                         return IntPtr.Zero;
@@ -562,6 +591,7 @@ namespace TilingWindowManager
                         if (selectedIndex > 0)
                         {
                             selectedIndex--;
+                            EnsureSelectedVisible();
                             InvalidateRect(windowHandle, IntPtr.Zero, false);
                         }
                         break;
@@ -570,6 +600,7 @@ namespace TilingWindowManager
                         if (selectedIndex < filteredWindows.Count - 1)
                         {
                             selectedIndex++;
+                            EnsureSelectedVisible();
                             InvalidateRect(windowHandle, IntPtr.Zero, false);
                         }
                         break;
@@ -600,8 +631,66 @@ namespace TilingWindowManager
 
         private void UpdateFiltered()
         {
-            filteredWindows = FuzzyMatcher.FilterAndSort(allWindows, searchText, config.MaxResults);
+            filteredWindows = FuzzyMatcher.FilterAndSort(allWindows, searchText, int.MaxValue);
             selectedIndex = 0;
+            scrollOffset = 0;
+        }
+
+        private void EnsureSelectedVisible()
+        {
+            int maxVisibleItems = Math.Min(config.MaxResults, filteredWindows.Count);
+            int maxScrollOffset = Math.Max(0, filteredWindows.Count - maxVisibleItems);
+
+            // scroll down if item is below visible area
+            if (selectedIndex >= scrollOffset + maxVisibleItems)
+            {
+                scrollOffset = selectedIndex - maxVisibleItems + 1;
+            }
+            // scroll up if item is below visible area
+            else if (selectedIndex < scrollOffset)
+            {
+                scrollOffset = selectedIndex;
+            }
+
+            scrollOffset = Math.Max(0, Math.Min(scrollOffset, maxScrollOffset));
+        }
+
+        private void HandleMouseWheel(IntPtr wParam)
+        {
+            lock (lockObject)
+            {
+                short delta = (short)((long)wParam >> 16);
+                int scrollLines = -delta / 120; 
+
+                scrollOffset += scrollLines;
+                scrollOffset = Math.Max(0, Math.Min(scrollOffset, Math.Max(0, filteredWindows.Count - config.MaxResults)));
+
+                InvalidateRect(windowHandle, IntPtr.Zero, false);
+            }
+        }
+
+        private void HandleMouseClick(IntPtr lParam)
+        {
+            lock (lockObject)
+            {
+                int x = (short)(lParam.ToInt32() & 0xFFFF);
+                int y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+
+                // calculate which item was clicked based on Y coordinate
+                int searchBoxHeight = config.ItemHeight + 20;
+                int clickedIndex = (y - searchBoxHeight) / config.ItemHeight + scrollOffset;
+
+                if (clickedIndex >= 0 && clickedIndex < filteredWindows.Count)
+                {
+                    selectedIndex = clickedIndex;
+                    EnsureSelectedVisible();
+
+                    // select the window
+                    var selected = filteredWindows[selectedIndex];
+                    Hide();
+                    WindowSelected?.Invoke(selected.WindowHandle);
+                }
+            }
         }
         private void HandlePaint(IntPtr hWnd)
         {
@@ -684,7 +773,9 @@ namespace TilingWindowManager
             int itemsDrawn = 0;
             int maxVisible = config.MaxResults;
 
-            for (int i = 0; i < filteredWindows.Count && itemsDrawn < maxVisible; i++)
+            // Draw items starting from scrollOffset
+            int endIndex = Math.Min(scrollOffset + maxVisible, filteredWindows.Count);
+            for (int i = scrollOffset; i < endIndex; i++)
             {
                 bool isSelected = (i == selectedIndex);
                 DrawResultItem(hdc, filteredWindows[i], yOffset, isSelected, clientRect.Width);

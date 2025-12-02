@@ -34,6 +34,14 @@ namespace TilingWindowManager
         public int SearchBoxHeight { get; private set; } = 40;
         public int CornerRadius { get; private set; } = 8;
 
+        public int GetCalculatedHeight()
+        {
+            int searchBoxArea = 10 + SearchBoxHeight + 10; 
+            int itemsArea = MaxResults * ItemHeight;
+            int bottomPadding = 10;
+            return searchBoxArea + itemsArea + bottomPadding;
+        }
+
         public uint BackgroundColor { get; private set; } = 0x1c1c1c;
         public uint SelectedColor { get; private set; } = 0x2a4a7c;
         public uint TextColor { get; private set; } = 0xFFFFFF;
