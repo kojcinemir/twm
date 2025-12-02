@@ -276,7 +276,8 @@ namespace TilingWindowManager
                 {
 
                     var originalMonitorHandle = MonitorFromWindow(e.WindowHandle, MONITOR_DEFAULTTONEAREST);
-                    var targetMonitor = GetMonitorByIndex(lastActiveMonitorIndex) ?? GetActiveMonitor();
+                    var targetMonitor = GetActiveMonitor() ?? GetMonitorByIndex(lastActiveMonitorIndex);
+                    if (targetMonitor == null) return;
                     if (targetMonitor.GetCurrentWorkspace().ContainsWindow(e.WindowHandle)) return;
                     if (targetMonitor.Handle == nint.Zero) return;
                     if (originalMonitorHandle != targetMonitor.Handle)
@@ -1209,6 +1210,11 @@ namespace TilingWindowManager
                                     globalActiveMonitorIndex = monitor.Index;
                                     lastActiveMonitorIndex = monitor.Index;
 
+                                    if (!isSameMonitor)
+                                    {
+                                        EnsureMonitorIsActive(monitor);
+                                    }
+
                                     PrepareStackedWorkspaceForAppSwitcher(workspace);
 
                                     SwitchToWorkspace(workspace.Id, monitor.Index, activateBorderLastWindow: true, autoFocusWindow: false);
@@ -1230,6 +1236,11 @@ namespace TilingWindowManager
                                 // need to switch monitor / workspace
                                 globalActiveMonitorIndex = monitor.Index;
                                 lastActiveMonitorIndex = monitor.Index;
+
+                                if (!isSameMonitor)
+                                {
+                                    EnsureMonitorIsActive(monitor);
+                                }
 
                                 SwitchToWorkspace(workspace.Id, monitor.Index);
 

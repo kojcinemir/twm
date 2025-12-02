@@ -304,28 +304,36 @@ namespace TilingWindowManager
             var currentWorkspace = targetMonitor.GetCurrentWorkspace();
             if (currentWorkspace.WindowCount > 0)
             {
-                nint lastActiveWindow = nint.Zero;
-                var windows = currentWorkspace.GetAllWindows();
-
-                for (int i = windows.Count - 1; i >= 0; i--)
+                if (currentWorkspace.IsStackedMode)
                 {
-                    var window = windows[i];
-                    if (IsWindowVisible(window))
-                    {
-                        lastActiveWindow = window;
-                        break;
-                    }
+                    ApplyStackedLayout(targetMonitor, currentWorkspace);
                 }
-
-                if (lastActiveWindow != nint.Zero)
+                else
                 {
-                    try
+                    // for non-stacked workspaces ->  focus the last active window
+                    nint lastActiveWindow = nint.Zero;
+                    var windows = currentWorkspace.GetAllWindows();
+
+                    for (int i = windows.Count - 1; i >= 0; i--)
                     {
-                        SetForegroundWindow(lastActiveWindow);
-                        BringWindowToTop(lastActiveWindow);
+                        var window = windows[i];
+                        if (IsWindowVisible(window))
+                        {
+                            lastActiveWindow = window;
+                            break;
+                        }
                     }
-                    catch
+
+                    if (lastActiveWindow != nint.Zero)
                     {
+                        try
+                        {
+                            SetForegroundWindow(lastActiveWindow);
+                            BringWindowToTop(lastActiveWindow);
+                        }
+                        catch
+                        {
+                        }
                     }
                 }
             }
