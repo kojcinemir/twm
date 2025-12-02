@@ -114,11 +114,25 @@ namespace TilingWindowManager
                     break;
 
                 case "focus_down":
-                    SwitchFocus(BSPTiling.FocusDirection.Down);
+                    if (appSwitcher.IsVisible)
+                    {
+                        appSwitcher.NavigateDown();
+                    }
+                    else
+                    {
+                        SwitchFocus(BSPTiling.FocusDirection.Down);
+                    }
                     break;
 
                 case "focus_up":
-                    SwitchFocus(BSPTiling.FocusDirection.Up);
+                    if (appSwitcher.IsVisible)
+                    {
+                        appSwitcher.NavigateUp();
+                    }
+                    else
+                    {
+                        SwitchFocus(BSPTiling.FocusDirection.Up);
+                    }
                     break;
 
                 case "move_to_workspace":
