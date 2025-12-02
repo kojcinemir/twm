@@ -17,19 +17,19 @@ allowed_owned_windows = ["frontrunner"]
 # Options: "tiled", "stacked", "paused"
 # If not specified, workspace defaults to "tiled"
 [workspace]
-    workspace_1 = "tiled"
-    workspace_2 = "tiled"
-    workspace_3 = "tiled"
-    workspace_4 = "tiled"
-    workspace_5 = "tiled"
-    workspace_6 = "tiled"
-    workspace_7 = "tiled"
-    workspace_8 = "tiled"
+    workspace_1 = "stacked"
+    workspace_2 = "stacked"
+    workspace_3 = "stacked"
+    workspace_4 = "stacked"
+    workspace_5 = "stacked"
+    workspace_6 = "stacked"
+    workspace_7 = "stacked"
+    workspace_8 = "stacked"
 
 # Logging Settings
 [logging]
     enabled = false  # Set to false to disable logging in normal mode (saves resources)
-    level = "debug"   # options: debug, info, warning, error
+    level = "info"   # options: debug, info, warning, error
 
 # Workspace Indicator Visual Settings
 [workspace_indicator]
@@ -88,7 +88,21 @@ allowed_owned_windows = ["frontrunner"]
     rounded_borders = true
     corner_radius = 12
     opacity = 255
-	# border_color = 0xFB923C # uncomment to override default color palette 
+	# border_color = 0xFB923C # uncomment to override default color palette
+
+# App Switcher Settings
+[app_switcher]
+    width = 600
+    height = 400
+    max_results = 8
+    item_height = 50
+    search_box_height = 40
+    corner_radius = 8
+    # Color settings - uncomment to override the color scheme
+    # background_color = 0x1c1c1c
+    # selected_color = 0x2a4a7c
+    # text_color = 0xFFFFFF
+    # subtitle_color = 0x888888
 
 # Pinned Applications - Applications that should always appear on specific workspaces
 [pinned_applications]
@@ -108,6 +122,11 @@ allowed_owned_windows = ["frontrunner"]
     [hotkeys.exit_application]
         key = "ALT+CTRL+O"
         action = "exit_application"
+
+# Open application switcher
+    [hotkeys.open_app_switcher]
+        key = "CTRL+SPACE"
+        action = "open_app_switcher"
 
 # Find empty workspace on active monitor and switch to it
     [hotkeys.switch_to_free_workspace]

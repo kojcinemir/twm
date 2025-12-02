@@ -109,6 +109,22 @@ namespace TilingWindowManager
         [DllImport("user32.dll")]
         private static extern bool PostMessage(nint hWnd, uint Msg, nint wParam, nint lParam);
 
+        [DllImport("user32.dll")]
+        private static extern nint SendMessage(nint hWnd, uint Msg, nint wParam, nint lParam);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern nint OpenProcess(uint processAccess, bool bInheritHandle, uint processId);
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        private static extern uint GetModuleFileNameEx(nint hProcess, nint hModule, StringBuilder lpBaseName, uint nSize);
+
+        [DllImport("shell32.dll")]
+        private static extern nint ExtractIcon(nint hInst, string lpszExeFileName, int nIconIndex);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(nint hObject);
+
+
 
         private delegate void WinEventDelegate(nint hWinEventHook, uint eventType, nint hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
 
@@ -169,6 +185,13 @@ namespace TilingWindowManager
         private const uint PM_NOREMOVE = 0x0000;
         private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
 
+        //app switcher
+        private const uint WM_GETICON = 0x007F;
+        private const int ICON_SMALL = 0;
+        private const int ICON_BIG = 1;
+        private const uint PROCESS_QUERY_INFORMATION = 0x0400;
+        private const uint PROCESS_VM_READ = 0x0010;
+
         private WinEventDelegate winEventProc = null!;
         private WinEventDelegate newWindowEventProc = null!;
         private GCHandle winEventProcHandle;
@@ -190,6 +213,7 @@ namespace TilingWindowManager
         private bool isRunning = true;
         private WindowBorder windowBorder;
         private WindowMonitor windowMonitor;
+        private AppSwitcher appSwitcher;
         private bool isTilingEnabled = true;
         private bool autoTilingEnabled = true;
         private bool isTilingInProgress = false;
@@ -231,6 +255,9 @@ namespace TilingWindowManager
             windowBorder = new WindowBorder();
             windowMonitor = new WindowMonitor();
             windowBorder.SetTileCheckCallback(IsWindowTiled);
+
+            appSwitcher = new AppSwitcher();
+            appSwitcher.WindowSelected += OnAppSwitcherWindowSelected;
 
             InitializeWindowEventHooks();
 
@@ -1034,6 +1061,189 @@ namespace TilingWindowManager
             }
         }
 
+        private void PrepareStackedWorkspaceForAppSwitcher(Workspace workspace)
+        {
+            var stackableWindows = workspace.GetStackableWindows();
+            foreach (var window in stackableWindows)
+            {
+                ShowWindow(window, SW_HIDE);
+            }
+        }
+
+        private List<WindowSearchEntry> CollectAllWindows()
+        {
+            var entries = new List<WindowSearchEntry>();
+
+            try
+            {
+                foreach (var monitor in monitors)
+                {
+                    for (int workspaceId = 1; workspaceId <= 8; workspaceId++)
+                    {
+                        var workspace = monitor.GetWorkspace(workspaceId);
+                        if (workspace == null) continue;
+
+                        var windows = workspace.GetAllWindows();
+
+                        foreach (var window in windows)
+                        {
+                            var windowInfo = workspace.GetWindows().GetWindowInfo(window);
+                            if (windowInfo != null && !string.IsNullOrEmpty(windowInfo.Title))
+                            {
+                                entries.Add(new WindowSearchEntry
+                                {
+                                    WindowHandle = window,
+                                    Title = windowInfo.Title,
+                                    ClassName = windowInfo.ClassName,
+                                    ExecutableName = GetExecutableName(window),
+                                    WorkspaceId = workspaceId,
+                                    MonitorIndex = monitor.Index,
+                                    Icon = GetWindowIcon(window),
+                                    FuzzyScore = 0
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error collecting windows for app switcher");
+            }
+
+            return entries;
+        }
+
+
+        private nint GetWindowIcon(nint window)
+        {
+            try
+            {
+                // try to get small icon first
+                nint icon = SendMessage(window, WM_GETICON, new nint(ICON_SMALL), nint.Zero);
+                if (icon != nint.Zero)
+                    return icon;
+
+                // try big icon
+                icon = SendMessage(window, WM_GETICON, new nint(ICON_BIG), nint.Zero);
+                if (icon != nint.Zero)
+                    return icon;
+
+                // extract from executable
+                GetWindowThreadProcessId(window, out uint processId);
+                nint processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, processId);
+
+                if (processHandle != nint.Zero)
+                {
+                    var exePath = new StringBuilder(260);
+                    if (GetModuleFileNameEx(processHandle, nint.Zero, exePath, 260) > 0)
+                    {
+                        icon = ExtractIcon(GetModuleHandle(null), exePath.ToString(), 0);
+                    }
+                    CloseHandle(processHandle);
+
+                    if (icon != nint.Zero)
+                        return icon;
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+
+            return nint.Zero;
+        }
+
+        private string GetExecutableName(nint window)
+        {
+            try
+            {
+                GetWindowThreadProcessId(window, out uint processId);
+                nint processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, processId);
+
+                if (processHandle != nint.Zero)
+                {
+                    var exePath = new StringBuilder(260);
+                    if (GetModuleFileNameEx(processHandle, nint.Zero, exePath, 260) > 0)
+                    {
+                        string fullPath = exePath.ToString();
+                        CloseHandle(processHandle);
+                        return System.IO.Path.GetFileName(fullPath);
+                    }
+                    CloseHandle(processHandle);
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+
+            return "";
+        }
+
+        private void OnAppSwitcherWindowSelected(nint windowHandle)
+        {
+            try
+            {
+                foreach (var monitor in monitors)
+                {
+                    var workspace = monitor.FindWorkspaceContaining(windowHandle);
+                    if (workspace != null)
+                    {
+                        bool isSameMonitor = (monitor.Index == globalActiveMonitorIndex);
+                        bool isCurrentWorkspace = (monitor.CurrentWorkspaceId == workspace.Id);
+                        bool isAlreadyVisible = isSameMonitor && isCurrentWorkspace;
+
+                        if (workspace.IsStackedMode)
+                        {
+                            var stackableWindows = workspace.GetStackableWindows();
+                            int targetIndex = stackableWindows.FindIndex(w => w == windowHandle);
+                            if (targetIndex >= 0)
+                            {
+                                workspace.SetCurrentStackedWindowIndex(targetIndex);
+
+                                if (isAlreadyVisible)
+                                {
+                                    ApplyStackedLayout(monitor, workspace);
+                                }
+                                else
+                                {
+                                    globalActiveMonitorIndex = monitor.Index;
+                                    lastActiveMonitorIndex = monitor.Index;
+
+                                    PrepareStackedWorkspaceForAppSwitcher(workspace);
+
+                                    SwitchToWorkspace(workspace.Id, monitor.Index, activateBorderLastWindow: true, autoFocusWindow: false);
+
+                                    ApplyStackedLayout(monitor, workspace);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Non-stacked mode
+                            if (isAlreadyVisible)
+                            {
+                                //window already visible just focus to it
+                                FocusWindow(windowHandle, workspace);
+                            }
+                            else
+                            {
+                                // need to switch monitor / workspace
+                                globalActiveMonitorIndex = monitor.Index;
+                                lastActiveMonitorIndex = monitor.Index;
+
+                                SwitchToWorkspace(workspace.Id, monitor.Index);
+
+                                FocusWindow(windowHandle, workspace);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+        }
         public void Cleanup()
         {
 
@@ -1090,6 +1300,7 @@ namespace TilingWindowManager
             CleanupDragAndSwap();
             windowBorder?.Cleanup();
             windowMonitor?.StopMonitoring();
+            appSwitcher?.Cleanup();
             CleanupWorkspaceIndicators();
 
             foreach (var monitor in monitors)
@@ -1129,6 +1340,5 @@ namespace TilingWindowManager
             locationEventProc = null!;
             currentEnumCallback = null!;
         }
-
     }
 }
