@@ -84,7 +84,7 @@ allowed_owned_windows = ["frontrunner"]
 
 # Window Border Settings
 [window_border]
-    border_width = 4
+    border_width = 2
     rounded_borders = true
     corner_radius = 12
     opacity = 255
