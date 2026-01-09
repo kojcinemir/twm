@@ -125,7 +125,7 @@ allowed_owned_windows = ["frontrunner"]
 
 # Open application switcher
     [hotkeys.open_app_switcher]
-        key = "ALT+SPACE"
+        key = "CTRL+ALT+SPACE"
         action = "open_app_switcher"
 
 # Find empty workspace on active monitor and switch to it

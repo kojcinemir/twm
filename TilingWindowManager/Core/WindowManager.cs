@@ -803,7 +803,28 @@ namespace TilingWindowManager
                 var workspace = monitor.FindWorkspaceContaining(window);
                 if (workspace != null)
                 {
-                    workspace.GetTiling()?.RemoveWindow(window);
+                    if (workspace.IsStackedMode)
+                    {
+                        var stackableWindows = workspace.GetStackableWindows();
+                        int currentIndex = workspace.GetCurrentStackedWindowIndex();
+                        
+                        // if minimized window is the current stacked window, cycle to the next one
+                        if (currentIndex < stackableWindows.Count && stackableWindows[currentIndex] == window)
+                        {
+                            if (stackableWindows.Count > 1)
+                            {
+                                // cycle to next window
+                                workspace.CycleStackedWindow(1);
+                                ApplyStackedLayout(monitor, workspace);
+                            }
+                        }
+                        
+                        monitor.UpdateWorkspaceIndicator();
+                    }
+                    else
+                    {
+                        workspace.GetTiling()?.RemoveWindow(window);
+                    }
                     break;
                 }
             }
@@ -813,8 +834,24 @@ namespace TilingWindowManager
         {
             var monitor = GetMonitorForWindow(window);
             if (monitor == null) return;
-            monitor.AddWindowToCurrentWorkspace(window);
-            ApplyTilingToCurrentWorkspace(monitor);
+            
+            var workspace = monitor.FindWorkspaceContaining(window);
+            if (workspace != null && workspace.IsStackedMode)
+            {
+                // update the current stacked index to the restored window
+                var stackableWindows = workspace.GetStackableWindows();
+                int windowIndex = stackableWindows.IndexOf(window);
+                if (windowIndex >= 0)
+                {
+                    workspace.SetCurrentStackedWindowIndex(windowIndex);
+                    ApplyStackedLayout(monitor, workspace);
+                }
+            }
+            else
+            {
+                monitor.AddWindowToCurrentWorkspace(window);
+                ApplyTilingToCurrentWorkspace(monitor);
+            }
         }
 
         private bool EnumWindowsCallback(nint hWnd, nint lParam)
@@ -1028,11 +1065,23 @@ namespace TilingWindowManager
                     {
                         workspace.SetLastActiveWindow(currentFocusedWindow);
 
+                        if (workspace.IsStackedMode)
+                        {
+                            var stackableWindows = workspace.GetStackableWindows();
+                            int windowIndex = stackableWindows.IndexOf(currentFocusedWindow);
+                            if (windowIndex >= 0)
+                            {
+                                workspace.SetCurrentStackedWindowIndex(windowIndex);
+                            }
+                        }
+
                         if (monitor.Index != globalActiveMonitorIndex)
                         {
                             globalActiveMonitorIndex = monitor.Index;
                             lastActiveMonitorIndex = monitor.Index;
                         }
+
+                        monitor.UpdateWorkspaceIndicator();
 
                         break;
                     }
