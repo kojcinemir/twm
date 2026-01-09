@@ -124,6 +124,14 @@ namespace TilingWindowManager
         private const int WS_MINIMIZEBOX = 0x00020000;
         private const int WS_OVERLAPPED = 0x00000000;
         private const int WS_DISABLED = 0x08000000;
+        private const int WS_POPUP = unchecked((int)0x80000000);
+        private const int WS_THICKFRAME = 0x00040000;
+        private const int WS_SYSMENU = 0x00080000;
+        private const int WS_MAXIMIZEBOX = 0x00010000;
+        private const int WS_DLGFRAME = 0x00400000;
+        private const int WS_OVERLAPPEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+        private const int WS_EX_DLGMODALFRAME = 0x00000001;
+        private const int WS_EX_CONTEXTHELP = 0x00000400;
         private static readonly int[] WS_EX_STYLES_TO_IGNORE = {
         };
         private const int OBJID_WINDOW = 0;
@@ -311,10 +319,37 @@ namespace TilingWindowManager
             if (GetAncestor(hWnd, GA_ROOT) != hWnd) return false;
 
             long exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
+            int style = GetWindowLong(hWnd, GWL_STYLE);
 
             if ((exStyle & WS_EX_TOOLWINDOW) != 0) return false;
 
             if ((exStyle & WS_EX_NOACTIVATE) != 0) return false;
+
+            // filter out dialog windows -> like file copy dialogs, message boxes...
+            if ((exStyle & WS_EX_DLGMODALFRAME) != 0) return false;
+            if ((exStyle & WS_EX_CONTEXTHELP) != 0) return false;
+
+            // filter popup windows that aren't proper application windows
+            // popup windows without thick frame are usually dialogs/transient UI
+            bool isPopup = (style & WS_POPUP) != 0;
+            bool hasThickFrame = (style & WS_THICKFRAME) != 0;
+            bool hasSysMenu = (style & WS_SYSMENU) != 0;
+            bool hasMinimizeBox = (style & WS_MINIMIZEBOX) != 0;
+            bool hasMaximizeBox = (style & WS_MAXIMIZEBOX) != 0;
+
+            // if its a popup without a thick frame (non-resizable), its likely a dialog
+            if (isPopup && !hasThickFrame)
+            {
+                // allow if it has WS_EX_APPWINDOW explicitly set (app wants it treated as main window)
+                if ((exStyle & WS_EX_APPWINDOW) == 0) return false;
+            }
+
+            // check for typical dialog characteristics
+            if ((style & WS_DLGFRAME) != 0 && !hasThickFrame)
+            {
+                // its a dialog frame without resizing capability -> likely a dialog
+                if ((exStyle & WS_EX_APPWINDOW) == 0) return false;
+            }
 
             try
             {
@@ -333,6 +368,10 @@ namespace TilingWindowManager
                 string lc = cls.ToLowerInvariant();
                 if (lc == "shell_traywnd" || lc == "traynotifywnd" || lc == "progman" || lc == "workerw")
                     return false;
+                
+                // filter common dialog class names
+                if (lc.Contains("#32770")) return false; // standard Windows dialog class
+                if (lc == "operationstatuswindow") return false; // file copy dialog
             }
 
             if ((exStyle & WS_EX_APPWINDOW) != 0)
@@ -345,11 +384,6 @@ namespace TilingWindowManager
                     GetWindowText(hWnd, sb, sb.Capacity);
                     if (string.IsNullOrWhiteSpace(sb.ToString()) && !allowUntitled) return false;
                 }
-
-                if (!GetWindowRect(hWnd, out RECT r)) return false;
-                int width = Math.Max(0, r.Right - r.Left);
-                int height = Math.Max(0, r.Bottom - r.Top);
-                if (width < minWidth || height < minHeight) return false;
 
                 return true;
             }
@@ -384,7 +418,6 @@ namespace TilingWindowManager
             if (!GetWindowRect(hWnd, out RECT rect)) return false;
             int windowWidth = Math.Max(0, rect.Right - rect.Left);
             int windowHeight = Math.Max(0, rect.Bottom - rect.Top);
-            if (windowWidth < minWidth || windowHeight < minHeight) return false;
 
             GetWindowThreadProcessId(hWnd, out uint pidU);
             int pid = (int)pidU;
