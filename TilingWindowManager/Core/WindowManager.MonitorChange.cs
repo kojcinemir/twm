@@ -262,25 +262,34 @@ namespace TilingWindowManager
                     int eventType = wParam.ToInt32();
                     if (eventType == DBT_DEVICEARRIVAL || eventType == DBT_DEVICEREMOVECOMPLETE)
                     {
-                        if (_useCoalescedMonitorReconciliation)
+                        // only respond to monitor device changes, not USB drives or other devices
+                        if (lParam != nint.Zero && IsMonitorDevice(lParam))
                         {
-                            bool isArrival = (eventType == DBT_DEVICEARRIVAL);
-                            ScheduleMonitorReconciliation(isArrival);
-                        }
-                        else
-                        {
-                            Task.Run(() => CheckForMonitorChanges());
+                            if (_useCoalescedMonitorReconciliation)
+                            {
+                                bool isArrival = (eventType == DBT_DEVICEARRIVAL);
+                                ScheduleMonitorReconciliation(isArrival);
+                            }
+                            else
+                            {
+                                Task.Run(() => CheckForMonitorChanges());
+                            }
                         }
                     }
                     else if (eventType == DBT_DEVNODES_CHANGED)
                     {
-                        if (_useCoalescedMonitorReconciliation)
+                        // DBT_DEVNODES_CHANGED is triggered for any device change 
+                        // only proceed if monitors actually changed
+                        if (HasMonitorConfigurationChanged())
                         {
-                            ScheduleMonitorReconciliation(false);
-                        }
-                        else
-                        {
-                            Task.Run(() => CheckForMonitorChanges());
+                            if (_useCoalescedMonitorReconciliation)
+                            {
+                                ScheduleMonitorReconciliation(false);
+                            }
+                            else
+                            {
+                                Task.Run(() => CheckForMonitorChanges());
+                            }
                         }
                     }
                     break;
@@ -305,6 +314,64 @@ namespace TilingWindowManager
             }
 
             return DefWindowProcW(hWnd, msg, wParam, lParam);
+        }
+
+        private bool IsMonitorDevice(nint lParam)
+        {
+            try
+            {
+                var hdr = Marshal.PtrToStructure<DEV_BROADCAST_HDR>(lParam);
+                
+                // only process device interface notifications
+                if (hdr.dbch_devicetype != DBT_DEVTYP_DEVICEINTERFACE)
+                {
+                    return false;
+                }
+
+                var deviceInterface = Marshal.PtrToStructure<DEV_BROADCAST_DEVICEINTERFACE_W_FIXED>(lParam);
+                
+                return deviceInterface.dbcc_classguid == GUID_DEVINTERFACE_MONITOR;
+            }
+            catch
+            {
+                // if structure can't be parsed assume it is not monitor
+                return false;
+            }
+        }
+
+        private bool HasMonitorConfigurationChanged()
+        {
+            try
+            {
+                var currentMonitors = new HashSet<string>();
+
+                uint deviceNum = 0;
+                DISPLAY_DEVICE device = new DISPLAY_DEVICE();
+                device.cb = Marshal.SizeOf(device);
+
+                while (EnumDisplayDevices(null, deviceNum, ref device, 0))
+                {
+                    if ((device.StateFlags & DisplayDeviceStateFlags.AttachedToDesktop) != 0)
+                    {
+                        currentMonitors.Add(device.DeviceName);
+                    }
+                    deviceNum++;
+                }
+
+                // check if the monitor configuration has actually changed
+                if (currentMonitors.Count != _lastKnownMonitors.Count)
+                {
+                    return true;
+                }
+
+                // check if the same monitors are present
+                return !currentMonitors.SetEquals(_lastKnownMonitors);
+            }
+            catch
+            {
+                // assume no change to avoid unnecessary processing if can't be determined
+                return false;
+            }
         }
 
         private void BackupMonitorsByRole(int monitorCount)
