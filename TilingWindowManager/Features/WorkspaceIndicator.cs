@@ -721,11 +721,16 @@ namespace TilingWindowManager
 
             foreach (var workspace in workspaces)
             {
-                workspaceHandles[workspace.Id] = workspace.GetAllWindows();
                 if (workspace.IsStackedMode)
                 {
+                    workspaceHandles[workspace.Id] = workspace.GetStackableWindows();
                     stackedModeWorkspaces.Add(workspace.Id);
                 }
+                else
+                {
+                    workspaceHandles[workspace.Id] = workspace.GetAllWindows();
+                }
+                
                 if (workspace.IsPaused)
                 {
                     pausedWorkspaces.Add(workspace.Id);
@@ -743,11 +748,16 @@ namespace TilingWindowManager
 
             foreach (var workspace in workspaces)
             {
-                workspaceHandles[workspace.Id] = workspace.GetAllWindows();
                 if (workspace.IsStackedMode)
                 {
+                    workspaceHandles[workspace.Id] = workspace.GetStackableWindows();
                     stackedModeWorkspaces.Add(workspace.Id);
                 }
+                else
+                {
+                    workspaceHandles[workspace.Id] = workspace.GetAllWindows();
+                }
+                
                 if (workspace.IsPaused)
                 {
                     pausedWorkspaces.Add(workspace.Id);
