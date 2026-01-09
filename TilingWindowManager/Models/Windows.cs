@@ -40,6 +40,9 @@ namespace TilingWindowManager
         private static extern bool IsWindowVisible(nint hWnd);
 
         [DllImport("user32.dll")]
+        private static extern bool IsWindow(nint hWnd);
+
+        [DllImport("user32.dll")]
         private static extern int GetWindowText(nint hWnd, StringBuilder lpString, int nMaxCount);
 
         [DllImport("user32.dll")]
@@ -250,19 +253,19 @@ namespace TilingWindowManager
             }
         }
 
-        public List<nint> GetVisibleWindows()
-        {
-            return windowList.Where(w => IsValidWindow(w) && IsWindowVisible(w)).ToList();
-        }
-
         public List<nint> GetTileableWindows()
         {
-            return windowList.Where(w => IsValidTileableWindow(w) && !IsIconic(w) && IsWindowVisible(w)).ToList();
+            return windowList.Where(w => IsWindow(w) && IsValidTileableWindow(w) && !IsIconic(w)).ToList();
+        }
+
+        public List<nint> GetVisibleWindows()
+        {
+            return windowList.Where(w => IsWindow(w) && IsValidTileableWindow(w) && !IsIconic(w) && IsWindowVisible(w)).ToList();
         }
 
         public List<nint> GetStackableWindows()
         {
-            return windowList.Where(w => IsValidTileableWindow(w) && !IsIconic(w)).ToList();
+            return windowList.Where(w => IsWindow(w) && IsValidTileableWindow(w) && !IsIconic(w)).ToList();
         }
 
         public bool MoveWindowInList(nint window, int offset)
