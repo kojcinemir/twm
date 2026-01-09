@@ -471,6 +471,14 @@ namespace TilingWindowManager
 
                 var borderData = monitorBorders[monitorHandle];
 
+                // hide border for full screen windows
+                if (IsWindowFullScreen(targetWindow))
+                {
+                    HideBorderForMonitor(borderData);
+                    borderData.LastActiveWindow = nint.Zero;
+                    return;
+                }
+
                 if (isWindowTiledCallback != null && !isWindowTiledCallback(targetWindow))
                 {
                     HideBorderForMonitor(borderData);
@@ -499,6 +507,43 @@ namespace TilingWindowManager
                     return true;
             }
             return false;
+        }
+
+        private bool IsWindowFullScreen(nint window)
+        {
+            if (window == nint.Zero)
+                return false;
+
+            if (!GetWindowRect(window, out RECT windowRect))
+                return false;
+
+            nint monitorHandle = MonitorFromRect(ref windowRect, MONITOR_DEFAULTTONEAREST);
+            if (monitorHandle == nint.Zero)
+                return false;
+
+            Monitor.MONITORINFO monitorInfo = new Monitor.MONITORINFO();
+            monitorInfo.cbSize = (uint)Marshal.SizeOf(typeof(Monitor.MONITORINFO));
+            if (!GetMonitorInfo(monitorHandle, ref monitorInfo))
+                return false;
+
+            // check if window covers the entire monitor  -> including taskbar area
+            RECT monitorRect = new RECT
+            {
+                Left = monitorInfo.rcMonitor.Left,
+                Top = monitorInfo.rcMonitor.Top,
+                Right = monitorInfo.rcMonitor.Right,
+                Bottom = monitorInfo.rcMonitor.Bottom
+            };
+
+            // allow a small tolerance 1-2 pixels for minor differences
+            const int tolerance = 2;
+            bool coversMonitor = 
+                Math.Abs(windowRect.Left - monitorRect.Left) <= tolerance &&
+                Math.Abs(windowRect.Top - monitorRect.Top) <= tolerance &&
+                Math.Abs(windowRect.Right - monitorRect.Right) <= tolerance &&
+                Math.Abs(windowRect.Bottom - monitorRect.Bottom) <= tolerance;
+
+            return coversMonitor;
         }
 
         private static bool RectEquals(in RECT left, in RECT right)
