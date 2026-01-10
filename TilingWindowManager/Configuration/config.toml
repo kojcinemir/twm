@@ -246,35 +246,43 @@ allowed_owned_windows = ["frontrunner"]
 # Focus window on active workspace
     [hotkeys.focus_left]
         key = "ALT+H"
+        alt_key = "ALT+LEFT"
         action = "focus_left"
 
     [hotkeys.focus_down]
         key = "ALT+J"
+        alt_key = "ALT+DOWN"
         action = "focus_down"
 
     [hotkeys.focus_up]
         key = "ALT+K"
+        alt_key = "ALT+UP"
         action = "focus_up"
 
     [hotkeys.focus_right]
         key = "ALT+L"
+        alt_key = "ALT+RIGHT"
         action = "focus_right"
 
 # Move window position on active workspace
     [hotkeys.swap_left]
         key = "ALT+SHIFT+H"
+        alt_key = "ALT+SHIFT+LEFT"
         action = "swap_left"
 
     [hotkeys.swap_down]
         key = "ALT+SHIFT+J"
+        alt_key = "ALT+SHIFT+DOWN"
         action = "swap_down"
 
     [hotkeys.swap_up]
         key = "ALT+SHIFT+K"
+        alt_key = "ALT+SHIFT+UP"
         action = "swap_up"
 
     [hotkeys.swap_right]
         key = "ALT+SHIFT+L"
+        alt_key = "ALT+SHIFT+RIGHT"
         action = "swap_right"
 
 # Switch to workspace on current active monitor
@@ -348,18 +356,22 @@ allowed_owned_windows = ["frontrunner"]
 # Switch to monitor positioned left/right/top/bottom
     [hotkeys.switch_monitor_left]
         key = "ALT+CTRL+H"
+        alt_key = "ALT+CTRL+LEFT"
         action = "switch_monitor_left"
 
     [hotkeys.switch_monitor_down]
         key = "ALT+CTRL+J"
+        alt_key = "ALT+CTRL+DOWN"
         action = "switch_monitor_down"
 
     [hotkeys.switch_monitor_up]
         key = "ALT+CTRL+K"
+        alt_key = "ALT+CTRL+UP"
         action = "switch_monitor_up"
 
     [hotkeys.switch_monitor_right]
         key = "ALT+CTRL+L"
+        alt_key = "ALT+CTRL+RIGHT"
         action = "switch_monitor_right"
 
 # Swapping active workspace windows with workspace at N on the active monitor
