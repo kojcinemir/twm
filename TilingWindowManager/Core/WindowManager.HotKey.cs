@@ -217,28 +217,6 @@ namespace TilingWindowManager
                     }
                     break;
 
-                case "switch_other_monitor_workspace":
-                    if (activeMonitor != null)
-                    {
-                        int targetWorkspaceId = ExtractWorkspaceNumberFromHotkey(hotkeyEntry);
-                        if (targetWorkspaceId > 0)
-                        {
-                            SwitchToWorkspaceOnOtherMonitor(targetWorkspaceId, activeMonitor);
-                        }
-                    }
-                    break;
-
-                case "move_to_other_monitor_workspace":
-                    if (activeMonitor != null)
-                    {
-                        int targetWorkspaceId = ExtractWorkspaceNumberFromHotkey(hotkeyEntry);
-                        if (targetWorkspaceId > 0)
-                        {
-                            MoveActiveWindowToWorkspaceOnOtherMonitor(targetWorkspaceId, activeMonitor);
-                        }
-                    }
-                    break;
-
                 case "remove_from_tiling":
                     RemoveFocusedWindowFromTiling();
                     break;
@@ -399,7 +377,32 @@ namespace TilingWindowManager
                                 chosenId = 1; // fallback to workspace 1 if none empty
                             }
 
-                            MoveActiveWindowToWorkspaceOnOtherMonitor(chosenId, activeMonitor);
+                            // Move window to the chosen workspace on the other monitor
+                            nint activeWindow = GetForegroundWindow();
+                            if (activeWindow != nint.Zero)
+                            {
+                                string executableName = GetExecutableNameFromWindow(activeWindow);
+                                if (!pinnedApplicationsConfig.IsApplicationPinned(executableName))
+                                {
+                                    var currentWorkspace = activeMonitor.GetCurrentWorkspace();
+                                    if (currentWorkspace.ContainsWindow(activeWindow))
+                                    {
+                                        int sourceWorkspaceId = currentWorkspace.Id;
+                                        SuspendBorder(activeWindow);
+                                        activeMonitor.RemoveWindowFromAllWorkspaces(activeWindow);
+                                        ResizeWindowForNewMonitor(activeWindow, activeMonitor, target);
+                                        target.MoveWindowToWorkspace(activeWindow, chosenId);
+                                        var targetWorkspace = target.GetWorkspace(chosenId);
+                                        targetWorkspace.SetLastActiveWindow(activeWindow);
+                                        ApplyTilingToCurrentWorkspace(activeMonitor);
+                                        ApplyTilingToCurrentWorkspace(target);
+                                        SwitchToMonitor(target);
+                                        SwitchToWorkspace(chosenId, target.Index, activateBorderLastWindow: false);
+                                        RefreshBorder(activeWindow);
+                                        CleanupBackupWorkspaceIfEmpty(activeMonitor, sourceWorkspaceId);
+                                    }
+                                }
+                            }
                             EnsureMonitorIsActive(target);
                         }
                     }

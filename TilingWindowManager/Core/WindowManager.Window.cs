@@ -420,68 +420,6 @@ namespace TilingWindowManager
             CleanupBackupWorkspaceIfEmpty(monitor, currentWorkspace.Id);
         }
 
-        private void MoveActiveWindowToWorkspaceOnOtherMonitor(int targetWorkspaceId, Monitor sourceMonitor)
-        {
-            nint activeWindow = GetForegroundWindow();
-
-            if (activeWindow == nint.Zero)
-            {
-                return;
-            }
-
-            string executableName = GetExecutableNameFromWindow(activeWindow);
-            if (pinnedApplicationsConfig.IsApplicationPinned(executableName))
-            {
-                return;
-            }
-
-            var currentWorkspace = sourceMonitor.GetCurrentWorkspace();
-            if (!currentWorkspace.ContainsWindow(activeWindow))
-            {
-                return;
-            }
-
-            Monitor targetMonitor = null;
-            foreach (var monitor in monitors)
-            {
-                if (monitor.Index != sourceMonitor.Index)
-                {
-                    targetMonitor = monitor;
-                    break;
-                }
-            }
-
-            if (targetMonitor == null)
-            {
-                return;
-            }
-
-            if (targetWorkspaceId == targetMonitor.CurrentWorkspaceId && GetMonitorForWindow(activeWindow) == targetMonitor)
-            {
-                return;
-            }
-
-            SuspendBorder(activeWindow);
-
-            int sourceWorkspaceId = currentWorkspace.Id;
-            sourceMonitor.RemoveWindowFromAllWorkspaces(activeWindow);
-
-            ResizeWindowForNewMonitor(activeWindow, sourceMonitor, targetMonitor);
-
-			targetMonitor.MoveWindowToWorkspace(activeWindow, targetWorkspaceId);
-			var targetWorkspace = targetMonitor.GetWorkspace(targetWorkspaceId);
-			targetWorkspace.SetLastActiveWindow(activeWindow);
-            ApplyTilingToCurrentWorkspace(sourceMonitor);
-            ApplyTilingToCurrentWorkspace(targetMonitor);
-
-            SwitchToMonitor(targetMonitor);
-            SwitchToWorkspace(targetWorkspaceId, targetMonitor.Index, activateBorderLastWindow: false);
-
-            RefreshBorder(activeWindow);
-
-            CleanupBackupWorkspaceIfEmpty(sourceMonitor, sourceWorkspaceId);
-        }
-
         private void MoveWindowToAdjacentMonitor(nint window, Monitor sourceMonitor, BSPTiling.FocusDirection direction)
         {
             MonitorDirection monitorDirection;

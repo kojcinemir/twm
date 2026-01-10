@@ -186,32 +186,6 @@ namespace TilingWindowManager
             globalActiveMonitorIndex = monitor.Index;
         }
 
-        private void SwitchToWorkspaceOnOtherMonitor(int targetWorkspaceId, Monitor sourceMonitor)
-        {
-            Monitor targetMonitor = null;
-            foreach (var monitor in monitors)
-            {
-                if (monitor.Index != sourceMonitor.Index)
-                {
-                    targetMonitor = monitor;
-                    break;
-                }
-            }
-
-            if (targetMonitor == null)
-            {
-                return;
-            }
-
-            if (targetWorkspaceId == targetMonitor.CurrentWorkspaceId && GetActiveMonitor() == targetMonitor)
-            {
-                return;
-            }
-
-            SwitchToMonitor(targetMonitor);
-            SwitchToWorkspace(targetWorkspaceId, targetMonitor.Index);
-        }
-
         private Monitor FindMonitorInDirection(Monitor currentMonitor, MonitorDirection direction)
         {
             if (currentMonitor == null) return null;
