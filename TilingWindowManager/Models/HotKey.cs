@@ -176,7 +176,31 @@ namespace TilingWindowManager
                 }
                 else
                 {
-                    Logger.Info($"Registered hotkey: {hotkey.Name}");
+                    Logger.Info($"Registered hotkey: {hotkey.Name} ({hotkey.KeyCombination})");
+                }
+
+                // Register alternative hotkey if present
+                if (hotkey.AltHotkeyId.HasValue && hotkey.AltKeyCode.HasValue)
+                {
+                    uint altModifiers = _config.GetAltModifiers(hotkey);
+                    bool altSuccess = RegisterHotKey(messageWindow, (int)hotkey.AltHotkeyId.Value, altModifiers, hotkey.AltKeyCode.Value);
+
+                    if (!altSuccess)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        if (error == 1409)
+                        {
+                            Logger.Warning($"Alternative hotkey for {hotkey.Name} ({hotkey.AltKeyCombination}) already registered by another application");
+                        }
+                        else
+                        {
+                            Logger.Error($"Failed to register alternative hotkey for {hotkey.Name} ({hotkey.AltKeyCombination}). Error: {error}");
+                        }
+                    }
+                    else
+                    {
+                        Logger.Info($"Registered alternative hotkey: {hotkey.Name} ({hotkey.AltKeyCombination})");
+                    }
                 }
             }
         }
@@ -286,6 +310,10 @@ namespace TilingWindowManager
             foreach (var hotkey in _config.AllHotKeys)
             {
                 UnregisterHotKey(messageWindow, (int)hotkey.HotkeyId);
+                if (hotkey.AltHotkeyId.HasValue)
+                {
+                    UnregisterHotKey(messageWindow, (int)hotkey.AltHotkeyId.Value);
+                }
             }
 
             foreach (var appHotkey in _appHotkeysConfig.AllApplicationHotkeys)
@@ -307,6 +335,10 @@ namespace TilingWindowManager
             foreach (var hotkey in _config.AllHotKeys)
             {
                 UnregisterHotKey(messageWindow, (int)hotkey.HotkeyId);
+                if (hotkey.AltHotkeyId.HasValue)
+                {
+                    UnregisterHotKey(messageWindow, (int)hotkey.AltHotkeyId.Value);
+                }
             }
 
             foreach (var appHotkey in _appHotkeysConfig.AllApplicationHotkeys)

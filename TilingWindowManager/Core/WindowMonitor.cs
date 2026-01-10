@@ -441,6 +441,7 @@ namespace TilingWindowManager
                     return true;
                 }
 
+/* commeting out area share check for now, as it causes issues with some applications
                 long thisArea = (long)windowWidth * windowHeight;
                 long maxArea = 0;
                 foreach (var w in windows)
@@ -456,6 +457,7 @@ namespace TilingWindowManager
                 if (thisArea >= maxArea * requireAreaShare) return true;
 
                 return false;
+*/
             }
             return true;
         }

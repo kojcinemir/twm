@@ -51,6 +51,13 @@ namespace TilingWindowManager
         public uint KeyCode { get; set; }
         public uint HotkeyId { get; set; }
         public string Action { get; set; } = "";
+        
+        // Alternative hotkey support
+        public string? AltKeyCombination { get; set; }
+        public string? AltKey { get; set; }
+        public string[]? AltModifiers { get; set; }
+        public uint? AltKeyCode { get; set; }
+        public uint? AltHotkeyId { get; set; }
     }
 
     public class HotKeyConfiguration
@@ -127,10 +134,15 @@ namespace TilingWindowManager
                     {
                         if (hotkeysTable[hotkeyName] is TomlTable hotkeyTable)
                         {
-                            var entry = ParseSimpleHotKeyEntry(hotkeyName, hotkeyTable, currentId++);
+                            var entry = ParseSimpleHotKeyEntry(hotkeyName, hotkeyTable, ref currentId);
                             if (entry != null)
                             {
                                 _hotkeys[entry.HotkeyId] = entry;
+                                // if there is an alternative hotkey, register it with a separate ID
+                                if (entry.AltHotkeyId.HasValue)
+                                {
+                                    _hotkeys[entry.AltHotkeyId.Value] = entry;
+                                }
                             }
                         }
                     }
@@ -146,14 +158,14 @@ namespace TilingWindowManager
             }
         }
 
-        private HotKeyEntry? ParseSimpleHotKeyEntry(string name, TomlTable table, uint id)
+        private HotKeyEntry? ParseSimpleHotKeyEntry(string name, TomlTable table, ref uint id)
         {
             try
             {
                 var entry = new HotKeyEntry
                 {
                     Name = name,
-                    HotkeyId = id
+                    HotkeyId = id++
                 };
 
                 // parse key combination (e.g., "ALT+CTRL+5")
@@ -164,6 +176,19 @@ namespace TilingWindowManager
                     {
                         Logger.Error($"Invalid key combination: {keyCombination}");
                         return null;
+                    }
+                }
+
+                if (table.TryGetValue("alt_key", out var altKeyObj) && altKeyObj is string altKeyCombination)
+                {
+                    entry.AltKeyCombination = altKeyCombination;
+                    entry.AltHotkeyId = id++;
+                    if (!ParseAltKeyCombination(altKeyCombination, entry))
+                    {
+                        Logger.Error($"Invalid alternative key combination: {altKeyCombination}");
+                        entry.AltKeyCombination = null;
+                        entry.AltHotkeyId = null;
+                        id--; // Return the ID since its not used
                     }
                 }
 
@@ -200,10 +225,43 @@ namespace TilingWindowManager
             return true;
         }
 
+        private bool ParseAltKeyCombination(string keyCombination, HotKeyEntry entry)
+        {
+            var parts = keyCombination.Split('+').Select(p => p.Trim().ToUpper()).ToArray();
+            if (parts.Length == 0) return false;
+
+            entry.AltKey = parts[parts.Length - 1];
+            entry.AltModifiers = parts.Take(parts.Length - 1).Select(m => m.ToLower()).ToArray();
+
+            if (!_keyMap.TryGetValue(entry.AltKey, out var keyCode))
+            {
+                Logger.Error($"Unknown alternative key: {entry.AltKey}");
+                return false;
+            }
+            entry.AltKeyCode = keyCode;
+
+            return true;
+        }
+
         public uint GetModifiers(HotKeyEntry entry)
         {
             uint modifiers = 0;
             foreach (var modifier in entry.Modifiers)
+            {
+                if (_modifierMap.TryGetValue(modifier, out var modifierValue))
+                {
+                    modifiers |= modifierValue;
+                }
+            }
+            return modifiers;
+        }
+
+        public uint GetAltModifiers(HotKeyEntry entry)
+        {
+            if (entry.AltModifiers == null) return 0;
+            
+            uint modifiers = 0;
+            foreach (var modifier in entry.AltModifiers)
             {
                 if (_modifierMap.TryGetValue(modifier, out var modifierValue))
                 {
@@ -257,23 +315,38 @@ namespace TilingWindowManager
         private string GenerateDefaultTomlConfiguration()
         {
             return @"
-# Tiling Window Manager Hotkey Configuration 
+# Tiling Window Manager Hotkey Configuration
 
-
-# Don't force (kill process) of the application.            
+# Don't force (kill process) of the application.
 # USE exit_application hotkey. Default ALT+CTRL+O instead to force close
-
 
 #####CONFIG#####
 
-# If application is not recognized for tile 
+# Color Scheme Selection
+# Available options: ""gruvbox"", ""tokyo-night"", ""nordic"", ""vscode"", ""everforest"", ""windows10""
+color_scheme = ""gruvbox""
+
+# If application is not recognized for tile
 # Add process names (without .exe) here to include them
 allowed_owned_windows = [""frontrunner""]
 
+# Workspace Settings
+# Options: ""tiled"", ""stacked"", ""paused""
+# If not specified, workspace defaults to ""tiled""
+[workspace]
+    workspace_1 = ""stacked""
+    workspace_2 = ""stacked""
+    workspace_3 = ""stacked""
+    workspace_4 = ""stacked""
+    workspace_5 = ""stacked""
+    workspace_6 = ""stacked""
+    workspace_7 = ""stacked""
+    workspace_8 = ""stacked""
+
 # Logging Settings
 [logging]
-    enabled = true  # Set to false to disable logging in normal mode (saves resources)
-    level = ""debug""   # options: debug, info, warning, error
+    enabled = false  # Set to false to disable logging in normal mode (saves resources)
+    level = ""info""   # options: debug, info, warning, error
 
 # Workspace Indicator Visual Settings
 [workspace_indicator]
@@ -281,15 +354,23 @@ allowed_owned_windows = [""frontrunner""]
     workspace_height = 40
     workspace_margin = 2
     icon_size = 16
-    active_workspace_border_color = 0xFB923C
-    background_color = 0x1c1c1c
-    active_workspace_color = 0x0f0f0f
-    hovered_workspace_color = 0x383838
-    inactive_workspace_color = 0x1c1c1c
-    active_workspace_text_color = 0x00FFFF
-    inactive_workspace_text_color = 0xFFFFFF
-    stacked_mode_workspace_color = 0x2a4a7c
-    stacked_mode_border_color = 0x2a4a7c
+    show_only_occupied_workspaces = true    # Only show current workspace and workspaces with applications
+    workspace_rounded_corners = true       # Enable rounded corners for workspace boxes
+    workspace_corner_radius = 4             # Corner radius in pixels (only applies if rounded corners enabled)
+
+    # Color settings - uncomment to override the color scheme
+    # active_workspace_border_color = 0xFB923C
+    # background_color = 0x1c1c1c
+    # active_workspace_color = 0x0f0f0f
+    # hovered_workspace_color = 0x383838
+    # inactive_workspace_color = 0x1c1c1c
+    # active_workspace_text_color = 0x00FFFF
+    # inactive_workspace_text_color = 0xFFFFFF
+    # stacked_mode_workspace_color = 0x2a4a7c
+    # stacked_mode_border_color = 0x2a4a7c
+    # paused_workspace_color = 0x90EE90
+    # paused_workspace_border_color = 0x90EE90
+
     offset_from_taskbar_left_edge = 0
     active_workspace_border_opacity = 255
 
@@ -297,24 +378,59 @@ allowed_owned_windows = [""frontrunner""]
     # use_windows10_positioning = true
     windows10_offset_from_taskbar_right_edge = 120
 
+    # Stacked App Display Settings (shown when workspace is in stacked mode)
+    show_stacked_app_title = false               # Show title text next to icon (true) or just icon (false)
+    stacked_app_title_max_length = 30            # Maximum characters for title before truncation
+    stacked_app_icon_size = 24                   # Size of application icons in pixels
+    stacked_app_item_width = 150                 # Width of each app item when showing icon + title
+    stacked_app_item_width_icon_only = 40        # Width of each app item when showing icon only
+    stacked_app_margin = 2                       # Margin between stacked app items
+
+    # Stacked App Shortcut Badge Settings (displays keyboard shortcut letters on stacked app icons)
+    show_stacked_app_numbers = true              # Show shortcut key badges on stacked app icons
+    stacked_app_number_badge_size = 14           # Size of the circular badge in pixels
+    # stacked_app_number_badge_background_color = 0x4a4a7c  # Badge background color (uncomment to override color scheme)
+    # stacked_app_number_badge_text_color = 0xFFFFFF        # Badge text color (uncomment to override color scheme)
+
+    # Stacked app colors - uncomment to override the color scheme
+    # stacked_app_background_color = 0x2a2a2a      # Background color for inactive stacked apps
+    # stacked_app_hover_color = 0x3a3a3a           # Background color when hovering over a stacked app
+    # stacked_app_active_color = 0x4a4a7c          # Background color for currently visible stacked app
+    # stacked_app_text_color = 0xFFFFFF            # Text color for inactive stacked apps
+    # stacked_app_active_text_color = 0xFB923C     # Text color for currently visible stacked app
+
 # Window Border Settings
 [window_border]
-    border_width = 4
-    border_color = 0xFB923C
+    border_width = 2
     rounded_borders = true
     corner_radius = 12
     opacity = 255
+	# border_color = 0xFB923C # uncomment to override default color palette
+
+# App Switcher Settings
+[app_switcher]
+    width = 600
+    height = 400
+    max_results = 8
+    item_height = 50
+    search_box_height = 40
+    corner_radius = 8
+    # Color settings - uncomment to override the color scheme
+    # background_color = 0x1c1c1c
+    # selected_color = 0x2a4a7c
+    # text_color = 0xFFFFFF
+    # subtitle_color = 0x888888
 
 # Pinned Applications - Applications that should always appear on specific workspaces
 [pinned_applications]
-    #""Notepad.exe"" = 8
+    ""slack.exe"" = 8
     #""chrome.exe"" = 1
 
 # Application Hotkeys - Hotkeys to switch to workspace containing specific applications
 [application_hotkeys]
-    ""ALT+Q"" = ""slack.exe""
-    ""ALT+W"" = ""TcXaeShell.exe""
-    ""ALT+E"" = ""devenv.exe""
+    ""ALT+SHIFT+Q"" = ""slack.exe""
+    ""ALT+SHIFT+W"" = ""TcXaeShell.exe""
+    ""ALT+SHIFT+E"" = ""devenv.exe""
     ""ALT+SHIFT+A"" = ""Arc.exe""
 
 # HotKey Key-Action Mappings
@@ -323,6 +439,11 @@ allowed_owned_windows = [""frontrunner""]
     [hotkeys.exit_application]
         key = ""ALT+CTRL+O""
         action = ""exit_application""
+
+# Open application switcher
+    [hotkeys.open_app_switcher]
+        key = ""CTRL+ALT+SPACE""
+        action = ""open_app_switcher""
 
 # Find empty workspace on active monitor and switch to it
     [hotkeys.switch_to_free_workspace]
@@ -336,7 +457,7 @@ allowed_owned_windows = [""frontrunner""]
 
 # Find free workspace on other monitor and move to it. Fallback to workspace 1 if all occupied. Works correctly in 2 monitor setup
     [hotkeys.switch_to_free_workspace_other_monitor]
-        key = ""CTRL+F""
+        key = ""ALT+CTRL+F""
         action = ""switch_to_free_workspace_other_monitor""
 
 # Move active window from one monitor to other monitor at first free workspace. If all occupied fallback to 1. Works correcly in 2 monitor setup
@@ -344,10 +465,15 @@ allowed_owned_windows = [""frontrunner""]
         key = ""CTRL+SHIFT+F""
         action = ""move_to_free_workspace_other_monitor""
 
-# Will refresh (retile) the workspace if there is some and issue with tiling        
+# Will refresh (retile) the workspace if there is some and issue with tiling
     [hotkeys.refresh_monitor]
-        key = ""ALT+R""
+        key = ""ALT+SHIFT+R""
         action = ""refresh_active_monitor""
+
+# Reload configuration without restarting the application
+    [hotkeys.reload_configuration]
+        key = ""ALT+CTRL+R""
+        action = ""reload_configuration""
 
 # Will untile the untile or retile the window that was previously tiled
     [hotkeys.remove_from_tiling]
@@ -363,32 +489,31 @@ allowed_owned_windows = [""frontrunner""]
     [hotkeys.cycle_stacked_window]
         key = ""ALT+S""
         action = ""cycle_stacked_window""
+  # Move stacked window position left (earlier in Z-order)
+      [hotkeys.move_stacked_window_left]
+          key = ""ALT+SHIFT+,""
+          action = ""move_stacked_window_left""
 
-# Move stacked window position left (earlier in Z-order)
-    [hotkeys.move_stacked_window_left]
-        key = ""ALT+SHIFT+,""
-        action = ""move_stacked_window_left""
-
-# Move stacked window position right (later in Z-order)
-    [hotkeys.move_stacked_window_right]
-        key = ""ALT+SHIFT+.""
-        action = ""move_stacked_window_right""
+  # Move stacked window position right (later in Z-order)
+      [hotkeys.move_stacked_window_right]
+          key = ""ALT+SHIFT+.""
+          action = ""move_stacked_window_right""
 
 # Jump to specific stacked window by position 
     [hotkeys.jump_to_stacked_window_1]
-        key = ""WIN+1""
+        key = ""ALT+Q""
         action = ""jump_to_stacked_window""
 
     [hotkeys.jump_to_stacked_window_2]
-        key = ""WIN+2""
+        key = ""ALT+W""
         action = ""jump_to_stacked_window""
 
     [hotkeys.jump_to_stacked_window_3]
-        key = ""WIN+3""
+        key = ""ALT+E""
         action = ""jump_to_stacked_window""
 
     [hotkeys.jump_to_stacked_window_4]
-        key = ""WIN+4""
+        key = ""ALT+R""
         action = ""jump_to_stacked_window""
 
     [hotkeys.jump_to_stacked_window_5]
@@ -411,7 +536,7 @@ allowed_owned_windows = [""frontrunner""]
         key = ""WIN+9""
         action = ""jump_to_stacked_window""
 
-# Toggle paused mode - windows can be moved freely without tiling
+# Toggle paused mode
     [hotkeys.toggle_paused_mode]
         key = ""ALT+P""
         action = ""toggle_paused_mode""
@@ -438,35 +563,43 @@ allowed_owned_windows = [""frontrunner""]
 # Focus window on active workspace
     [hotkeys.focus_left]
         key = ""ALT+H""
+        alt_key = ""ALT+LEFT""
         action = ""focus_left""
 
     [hotkeys.focus_down]
         key = ""ALT+J""
+        alt_key = ""ALT+DOWN""
         action = ""focus_down""
 
     [hotkeys.focus_up]
         key = ""ALT+K""
+        alt_key = ""ALT+UP""
         action = ""focus_up""
 
     [hotkeys.focus_right]
         key = ""ALT+L""
+        alt_key = ""ALT+RIGHT""
         action = ""focus_right""
 
 # Move window position on active workspace
     [hotkeys.swap_left]
         key = ""ALT+SHIFT+H""
+        alt_key = ""ALT+SHIFT+LEFT""
         action = ""swap_left""
 
     [hotkeys.swap_down]
         key = ""ALT+SHIFT+J""
+        alt_key = ""ALT+SHIFT+DOWN""
         action = ""swap_down""
 
     [hotkeys.swap_up]
         key = ""ALT+SHIFT+K""
+        alt_key = ""ALT+SHIFT+UP""
         action = ""swap_up""
 
     [hotkeys.swap_right]
         key = ""ALT+SHIFT+L""
+        alt_key = ""ALT+SHIFT+RIGHT""
         action = ""swap_right""
 
 # Switch to workspace on current active monitor
@@ -540,18 +673,22 @@ allowed_owned_windows = [""frontrunner""]
 # Switch to monitor positioned left/right/top/bottom
     [hotkeys.switch_monitor_left]
         key = ""ALT+CTRL+H""
+        alt_key = ""ALT+CTRL+LEFT""
         action = ""switch_monitor_left""
 
     [hotkeys.switch_monitor_down]
         key = ""ALT+CTRL+J""
+        alt_key = ""ALT+CTRL+DOWN""
         action = ""switch_monitor_down""
 
     [hotkeys.switch_monitor_up]
         key = ""ALT+CTRL+K""
+        alt_key = ""ALT+CTRL+UP""
         action = ""switch_monitor_up""
 
     [hotkeys.switch_monitor_right]
         key = ""ALT+CTRL+L""
+        alt_key = ""ALT+CTRL+RIGHT""
         action = ""switch_monitor_right""
 
 # Swapping active workspace windows with workspace at N on the active monitor
@@ -587,72 +724,6 @@ allowed_owned_windows = [""frontrunner""]
         key = ""ALT+CTRL+8""
         action = ""swap_workspace""
 
-# Go to workspace at number N on the other monitor. Works correctly in 2 monitor setup
-    [hotkeys.switch_other_monitor_workspace_1]
-        key = ""CTRL+1""
-        action = ""switch_other_monitor_workspace""
-
-    [hotkeys.switch_other_monitor_workspace_2]
-        key = ""CTRL+2""
-        action = ""switch_other_monitor_workspace""
-
-    [hotkeys.switch_other_monitor_workspace_3]
-        key = ""CTRL+3""
-        action = ""switch_other_monitor_workspace""
-
-    [hotkeys.switch_other_monitor_workspace_4]
-        key = ""CTRL+4""
-        action = ""switch_other_monitor_workspace""
-
-    [hotkeys.switch_other_monitor_workspace_5]
-        key = ""CTRL+5""
-        action = ""switch_other_monitor_workspace""
-
-    [hotkeys.switch_other_monitor_workspace_6]
-        key = ""CTRL+6""
-        action = ""switch_other_monitor_workspace""
-
-    [hotkeys.switch_other_monitor_workspace_7]
-        key = ""CTRL+7""
-        action = ""switch_other_monitor_workspace""
-
-    [hotkeys.switch_other_monitor_workspace_8]
-        key = ""CTRL+8""
-        action = ""switch_other_monitor_workspace""
-
-
-# Move active window from active monitor to workspace at N on other monitor. Works correctly in 2 monitor setup
-    [hotkeys.move_to_other_monitor_workspace_1]
-        key = ""CTRL+SHIFT+1""
-        action = ""move_to_other_monitor_workspace""
-
-    [hotkeys.move_to_other_monitor_workspace_2]
-        key = ""CTRL+SHIFT+2""
-        action = ""move_to_other_monitor_workspace""
-
-    [hotkeys.move_to_other_monitor_workspace_3]
-        key = ""CTRL+SHIFT+3""
-        action = ""move_to_other_monitor_workspace""
-
-    [hotkeys.move_to_other_monitor_workspace_4]
-        key = ""CTRL+SHIFT+4""
-        action = ""move_to_other_monitor_workspace""
-
-    [hotkeys.move_to_other_monitor_workspace_5]
-        key = ""CTRL+SHIFT+5""
-        action = ""move_to_other_monitor_workspace""
-
-    [hotkeys.move_to_other_monitor_workspace_6]
-        key = ""CTRL+SHIFT+6""
-        action = ""move_to_other_monitor_workspace""
-
-    [hotkeys.move_to_other_monitor_workspace_7]
-        key = ""CTRL+SHIFT+7""
-        action = ""move_to_other_monitor_workspace""
-
-    [hotkeys.move_to_other_monitor_workspace_8]
-        key = ""CTRL+SHIFT+8""
-        action = ""move_to_other_monitor_workspace""
 """;
         }
     }
