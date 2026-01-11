@@ -176,6 +176,7 @@ namespace TilingWindowManager
 
         private const int SW_HIDE = 0;
         private const int SW_SHOW = 5;
+        private const int SW_MINIMIZE = 6;
         private const int SW_RESTORE = 9;
         private const uint GW_OWNER = 4;
         private const int GWL_EXSTYLE = -20;
@@ -1356,7 +1357,7 @@ namespace TilingWindowManager
 
             UnstackAllWorkspaces();
 
-            ShowAllWindowsInAllMonitors();
+            ResizeAndMinimizeAllWindows();
             CleanupMonitorChangeDetection();
             CleanupDragAndSwap();
             windowBorder?.Cleanup();
