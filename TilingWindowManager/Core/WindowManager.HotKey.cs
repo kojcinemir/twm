@@ -249,6 +249,10 @@ namespace TilingWindowManager
                     TogglePausedMode();
                     break;
 
+                case "toggle_pause_pinning":
+                    TogglePausePinning();
+                    break;
+
                 case "exit_application":
                     Logger.Info("Exit hotkey pressed - cleaning up and terminating...");
                     Cleanup();
@@ -382,7 +386,7 @@ namespace TilingWindowManager
                             if (activeWindow != nint.Zero)
                             {
                                 string executableName = GetExecutableNameFromWindow(activeWindow);
-                                if (!pinnedApplicationsConfig.IsApplicationPinned(executableName))
+                                if (!pinnedApplicationsConfig.IsApplicationPinned(executableName, pausedPinnedApplications))
                                 {
                                     var currentWorkspace = activeMonitor.GetCurrentWorkspace();
                                     if (currentWorkspace.ContainsWindow(activeWindow))

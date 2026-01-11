@@ -227,6 +227,7 @@ namespace TilingWindowManager
         private ApplicationHotkeysConfiguration applicationHotkeysConfig;
         private nint lastTrackedFocusedWindow = nint.Zero;
         private HashSet<nint> excludedFromTilingWindows = new HashSet<nint>(); 
+        private HashSet<string> pausedPinnedApplications = new HashSet<string>(); 
 
         public bool ActiveWindowFollowsMouse
         {
@@ -286,7 +287,7 @@ namespace TilingWindowManager
                     }
                     
                     string executableName = GetExecutableNameFromWindow(e.WindowHandle);
-                    int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName);
+                    int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName, pausedPinnedApplications);
 
                     if (pinnedWorkspace.HasValue)
                     {
@@ -529,7 +530,7 @@ namespace TilingWindowManager
             if (monitor == null) return;
 
             string executableName = GetExecutableNameFromWindow(window);
-            int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName);
+            int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName, pausedPinnedApplications);
 
             if (pinnedWorkspace.HasValue)
             {
@@ -910,7 +911,7 @@ namespace TilingWindowManager
                     if (monitor != null)
                     {
                         string executableName = GetExecutableNameFromWindow(window);
-                        int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName);
+                        int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName, pausedPinnedApplications);
 
                         if (pinnedWorkspace.HasValue)
                         {

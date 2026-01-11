@@ -103,5 +103,33 @@ namespace TilingWindowManager
             string normalizedName = executableName.ToLowerInvariant();
             return _pinnedApplications.ContainsKey(normalizedName);
         }
+
+        public bool IsApplicationPinned(string executableName, HashSet<string> pausedApplications)
+        {
+            if (string.IsNullOrEmpty(executableName))
+                return false;
+
+            string normalizedName = executableName.ToLowerInvariant();
+            
+            // if pinning is paused for this app return false
+            if (pausedApplications != null && pausedApplications.Contains(normalizedName))
+                return false;
+
+            return _pinnedApplications.ContainsKey(normalizedName);
+        }
+
+        public int? GetPinnedWorkspace(string executableName, HashSet<string> pausedApplications)
+        {
+            if (string.IsNullOrEmpty(executableName))
+                return null;
+
+            string normalizedName = executableName.ToLowerInvariant();
+            
+            // if pinning is paused for this app return null
+            if (pausedApplications != null && pausedApplications.Contains(normalizedName))
+                return null;
+
+            return _pinnedApplications.TryGetValue(normalizedName, out int workspace) ? workspace : null;
+        }
     }
 }
