@@ -176,6 +176,7 @@ namespace TilingWindowManager
 
         private const int SW_HIDE = 0;
         private const int SW_SHOW = 5;
+        private const int SW_MINIMIZE = 6;
         private const int SW_RESTORE = 9;
         private const uint GW_OWNER = 4;
         private const int GWL_EXSTYLE = -20;
@@ -227,6 +228,7 @@ namespace TilingWindowManager
         private ApplicationHotkeysConfiguration applicationHotkeysConfig;
         private nint lastTrackedFocusedWindow = nint.Zero;
         private HashSet<nint> excludedFromTilingWindows = new HashSet<nint>(); 
+        private HashSet<string> pausedPinnedApplications = new HashSet<string>(); 
 
         public bool ActiveWindowFollowsMouse
         {
@@ -286,7 +288,7 @@ namespace TilingWindowManager
                     }
                     
                     string executableName = GetExecutableNameFromWindow(e.WindowHandle);
-                    int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName);
+                    int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName, pausedPinnedApplications);
 
                     if (pinnedWorkspace.HasValue)
                     {
@@ -529,7 +531,7 @@ namespace TilingWindowManager
             if (monitor == null) return;
 
             string executableName = GetExecutableNameFromWindow(window);
-            int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName);
+            int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName, pausedPinnedApplications);
 
             if (pinnedWorkspace.HasValue)
             {
@@ -910,7 +912,7 @@ namespace TilingWindowManager
                     if (monitor != null)
                     {
                         string executableName = GetExecutableNameFromWindow(window);
-                        int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName);
+                        int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName, pausedPinnedApplications);
 
                         if (pinnedWorkspace.HasValue)
                         {
@@ -1355,7 +1357,7 @@ namespace TilingWindowManager
 
             UnstackAllWorkspaces();
 
-            ShowAllWindowsInAllMonitors();
+            ResizeAndMinimizeAllWindows();
             CleanupMonitorChangeDetection();
             CleanupDragAndSwap();
             windowBorder?.Cleanup();

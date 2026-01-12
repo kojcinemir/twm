@@ -390,7 +390,7 @@ namespace TilingWindowManager
             }
 
             string executableName = GetExecutableNameFromWindow(activeWindow);
-            if (pinnedApplicationsConfig.IsApplicationPinned(executableName))
+            if (pinnedApplicationsConfig.IsApplicationPinned(executableName, pausedPinnedApplications))
             {
                 return;
             }
@@ -1180,6 +1180,72 @@ namespace TilingWindowManager
 
             currentWorkspace.MoveStackedWindowRight();
             ApplyStackedLayout(activeMonitor, currentWorkspace);
+        }
+
+        private void TogglePausePinning()
+        {
+            nint activeWindow = GetForegroundWindow();
+            if (activeWindow == nint.Zero)
+            {
+                return;
+            }
+
+            string executableName = GetExecutableNameFromWindow(activeWindow);
+            if (string.IsNullOrEmpty(executableName))
+            {
+                return;
+            }
+
+            if (!pinnedApplicationsConfig.IsApplicationPinned(executableName))
+            {
+                return;
+            }
+
+            string normalizedName = executableName.ToLowerInvariant();
+
+            if (pausedPinnedApplications.Contains(normalizedName))
+            {
+                // unpause application pinning
+                pausedPinnedApplications.Remove(normalizedName);
+                Logger.Info($"Pinning re-enabled for '{executableName}'");
+
+                // move window back to its pinned workspace if needed
+                int? pinnedWorkspace = pinnedApplicationsConfig.GetPinnedWorkspace(executableName, pausedPinnedApplications);
+                if (pinnedWorkspace.HasValue)
+                {
+                    var monitor = GetMonitorForWindow(activeWindow);
+                    if (monitor != null && monitor.CurrentWorkspaceId != pinnedWorkspace.Value)
+                    {
+                        var currentWorkspace = monitor.FindWorkspaceContaining(activeWindow);
+                        if (currentWorkspace != null && currentWorkspace.ContainsWindow(activeWindow))
+                        {
+                            var targetWorkspace = monitor.GetWorkspace(pinnedWorkspace.Value);
+                            
+                            currentWorkspace.RemoveWindow(activeWindow);
+                            targetWorkspace.AddWindow(activeWindow);
+
+                            if (currentWorkspace.Id == monitor.CurrentWorkspaceId)
+                            {
+                                ShowWindow(activeWindow, SW_HIDE);
+                            }
+
+                            ApplyTilingToWorkspace(currentWorkspace);
+                            
+                            if (targetWorkspace.Id == monitor.CurrentWorkspaceId)
+                            {
+                                ShowWindow(activeWindow, SW_SHOW);
+                                ApplyTilingToWorkspace(targetWorkspace);
+                            }
+
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // pause pinning for this application
+                pausedPinnedApplications.Add(normalizedName);
+            }
         }
     }
 }

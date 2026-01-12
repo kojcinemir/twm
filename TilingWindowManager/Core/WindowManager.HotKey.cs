@@ -249,6 +249,10 @@ namespace TilingWindowManager
                     TogglePausedMode();
                     break;
 
+                case "toggle_pause_pinning":
+                    TogglePausePinning();
+                    break;
+
                 case "exit_application":
                     Logger.Info("Exit hotkey pressed - cleaning up and terminating...");
                     Cleanup();
@@ -382,7 +386,7 @@ namespace TilingWindowManager
                             if (activeWindow != nint.Zero)
                             {
                                 string executableName = GetExecutableNameFromWindow(activeWindow);
-                                if (!pinnedApplicationsConfig.IsApplicationPinned(executableName))
+                                if (!pinnedApplicationsConfig.IsApplicationPinned(executableName, pausedPinnedApplications))
                                 {
                                     var currentWorkspace = activeMonitor.GetCurrentWorkspace();
                                     if (currentWorkspace.ContainsWindow(activeWindow))
@@ -451,6 +455,55 @@ namespace TilingWindowManager
             foreach (var monitor in monitors)
             {
                 ShowAllWindowsInMonitor(monitor);
+            }
+        }
+
+        private void ResizeAndMinimizeAllWindows()
+        {
+            const int targetWidth = 1200;
+            const int targetHeight = 800;
+
+            foreach (var monitor in monitors)
+            {
+                var allWindows = new List<nint>();
+                foreach (var workspace in monitor.GetAllWorkspaces())
+                {
+                    allWindows.AddRange(workspace.GetAllWindows());
+                }
+
+                currentEnumCallback = (hWnd, lParam) =>
+                {
+                    if (IsValidApplicationWindow(hWnd) && !allWindows.Contains(hWnd))
+                    {
+                        nint windowMonitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+                        if (windowMonitor == monitor.Handle)
+                        {
+                            allWindows.Add(hWnd);
+                        }
+                    }
+                    return true;
+                };
+                EnumWindows(enumWindowsProc, nint.Zero);
+
+                // calculate center position for this monitor
+                int centerX = monitor.WorkArea.Left + (monitor.WorkArea.Width - targetWidth) / 2;
+                int centerY = monitor.WorkArea.Top + (monitor.WorkArea.Height - targetHeight) / 2;
+
+                foreach (var window in allWindows)
+                {
+                    try
+                    {
+                        ShowWindow(window, SW_RESTORE);
+                        
+                        SetWindowPos(window, nint.Zero, centerX, centerY, targetWidth, targetHeight, 
+                            SWP_NOZORDER | SWP_NOACTIVATE);
+                        
+                        ShowWindow(window, SW_MINIMIZE);
+                    }
+                    catch
+                    {
+                    }
+                }
             }
         }
         private void ShowAllWindowsInMonitor(Monitor monitor)
